@@ -21,6 +21,7 @@ import { registerAuthRoutes } from './modules/auth/routes.js';
 import { registerTeamRoutes } from './modules/teams/routes.js';
 import { registerProjectRoutes } from './modules/projects/routes.js';
 import { registerUploadRoutes } from './modules/upload/routes.js';
+import { registerLibraryRoutes } from './modules/library/routes.js';
 import { registerScreenplayRoutes } from './modules/screenplay/routes.js';
 import { registerRundownRoutes } from './modules/rundown/routes.js';
 import { registerBibleRoutes } from './modules/bible/routes.js';
@@ -125,6 +126,7 @@ const setupApp = () => {
   registerTeamRoutes(app, authMiddleware);
   registerProjectRoutes(app, authMiddleware);
   registerUploadRoutes(app, authMiddleware);
+  registerLibraryRoutes(app, authMiddleware);
   registerScreenplayRoutes(app, authMiddleware);
   registerRundownRoutes(app, authMiddleware);
   registerBibleRoutes(app, authMiddleware);

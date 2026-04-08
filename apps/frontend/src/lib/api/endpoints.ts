@@ -24,4 +24,8 @@ export const ENDPOINTS = {
   photoTo3dCreate: "/v1/tools/photo-to-3d",
   photoTo3dPoll: (taskId: string) => `/v1/tools/photo-to-3d/${taskId}`,
   smartDistribute: "/v1/tools/smart-distribute",
+
+  // Library endpoints
+  library: "/v1/library",
+  libraryFile: (id: string) => `/v1/library/${id}`,
 } as const

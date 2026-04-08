@@ -14,7 +14,9 @@ import {
   Upload,
   X,
 } from 'lucide-react'
-import { deleteBlob, saveBlob } from '@/lib/fileStorage'
+import { deleteBlob } from '@/lib/fileStorage'
+import { saveBlobAdaptive } from '@/lib/blobAdapter'
+import { createLibraryFile } from '@/lib/api/library-adapter'
 import { useBoardStore } from '@/store/board'
 import { type LibraryFile, useLibraryStore } from '@/store/library'
 
@@ -148,27 +150,41 @@ export default function LibraryPanel({ projectId, hidden = false }: LibraryPanel
           const type = detectLibraryType(file)
           const thumbnailUrl = type === 'image' ? await createImageThumbnail(file) : undefined
 
-          try {
-            await saveBlob(id, file)
-          } catch {
-            // Keep metadata in store even if IndexedDB write fails.
-          }
+          const result = await saveBlobAdaptive(id, file, targetProjectId)
 
-          return {
+          const entry: LibraryFile = {
             id,
             name: file.name,
             type,
             mimeType: file.type || 'application/octet-stream',
             size: file.size,
-            url: objectUrl,
-            thumbnailUrl,
+            url: result.remote ? result.url : objectUrl,
+            thumbnailUrl: result.thumbnailUrl || thumbnailUrl,
             createdAt: now,
             updatedAt: now,
             tags: [],
             projectId: targetProjectId,
             folder: '/',
             origin: 'uploaded' as const,
+            s3Key: result.s3Key,
+            publicUrl: result.remote ? result.url : undefined,
           }
+
+          if (result.remote && result.s3Key) {
+            try {
+              const saved = await createLibraryFile({
+                projectId: targetProjectId, name: file.name, type, mimeType: entry.mimeType,
+                size: file.size, s3Key: result.s3Key, publicUrl: result.url,
+                tags: [], origin: 'uploaded',
+              })
+              entry.id = saved.id
+              entry.thumbnailUrl = saved.thumbnailUrl || entry.thumbnailUrl
+            } catch {
+              // Backend save failed — file still accessible via S3 URL
+            }
+          }
+
+          return entry
         })
       )
 

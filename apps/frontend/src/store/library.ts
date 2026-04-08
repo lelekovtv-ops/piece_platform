@@ -17,6 +17,10 @@ export type LibraryFile = {
   projectId: string
   folder: string
   origin: 'uploaded' | 'generated'
+  /** S3 object key (set when uploaded to server) */
+  s3Key?: string
+  /** Server-side public URL */
+  publicUrl?: string
   /** Prompt used for generation (only for generated images) */
   prompt?: string
   /** Model used for generation */
@@ -107,6 +111,8 @@ export const useLibraryStore = create<LibraryState>()(
           projectId: file.projectId,
           folder: file.folder,
           origin: file.origin,
+          s3Key: file.s3Key,
+          publicUrl: file.publicUrl,
           prompt: file.prompt,
           model: file.model,
           fullPrompt: file.fullPrompt,
@@ -121,12 +127,31 @@ export const useLibraryStore = create<LibraryState>()(
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) return
 
-        const fileIds = state.files.map((file) => file.id)
-        if (fileIds.length === 0) return
+        const localFiles = state.files.filter((f) => !f.s3Key)
+        const remoteFiles = state.files.filter((f) => f.s3Key)
 
-        void restoreAllBlobs(fileIds).then((restoredUrls) => {
+        // Remote files (S3): use publicUrl directly, no IndexedDB needed
+        if (remoteFiles.length > 0) {
           useLibraryStore.setState((current) => ({
             files: current.files.map((file) => {
+              if (!file.s3Key) return file
+              return {
+                ...file,
+                url: file.publicUrl || '',
+                thumbnailUrl: file.thumbnailUrl || file.publicUrl,
+              }
+            }),
+          }))
+        }
+
+        // Local files (IndexedDB fallback): restore blob URLs
+        const localIds = localFiles.map((f) => f.id)
+        if (localIds.length === 0) return
+
+        void restoreAllBlobs(localIds).then((restoredUrls) => {
+          useLibraryStore.setState((current) => ({
+            files: current.files.map((file) => {
+              if (file.s3Key) return file
               const restoredUrl = restoredUrls.get(file.id)
               if (!restoredUrl) {
                 return { ...file, url: '', thumbnailUrl: undefined }

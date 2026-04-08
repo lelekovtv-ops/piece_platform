@@ -43,7 +43,7 @@ export async function getUploadUrl(
     complete: () =>
       authFetch(ENDPOINTS.uploadComplete, {
         method: "POST",
-        body: JSON.stringify({ key: data.key }),
+        body: JSON.stringify({ key: data.key, contentType: contentType || "application/octet-stream" }),
       }),
   }
 }

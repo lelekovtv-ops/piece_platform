@@ -18,7 +18,9 @@ import {
   Video,
   X,
 } from "lucide-react"
-import { deleteBlob, saveBlob } from "@/lib/fileStorage"
+import { deleteBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
+import { createLibraryFile, deleteLibraryFile } from "@/lib/api/library-adapter"
 import { type LibraryFile, useLibraryStore } from "@/store/library"
 import { useProjectsStore } from "@/store/projects"
 import { useBoardStore } from "@/store/board"
@@ -230,12 +232,35 @@ export default function LibraryPage() {
           const objectUrl = URL.createObjectURL(file)
           const type = detectType(file)
           const thumbnailUrl = type === "image" ? await createThumbnail(file) : undefined
-          try { await saveBlob(id, file) } catch {}
-          return {
+
+          // Try S3 upload, fallback to IndexedDB
+          const result = await saveBlobAdaptive(id, file, pid)
+
+          const entry: LibraryFile = {
             id, name: file.name, type, mimeType: file.type || "application/octet-stream",
-            size: file.size, url: objectUrl, thumbnailUrl, createdAt: now, updatedAt: now,
+            size: file.size, url: result.remote ? result.url : objectUrl,
+            thumbnailUrl: result.thumbnailUrl || thumbnailUrl,
+            createdAt: now, updatedAt: now,
             tags: [] as string[], projectId: pid, folder: "/", origin: "uploaded" as const,
+            s3Key: result.s3Key, publicUrl: result.remote ? result.url : undefined,
           }
+
+          // Save metadata to backend if uploaded to S3
+          if (result.remote && result.s3Key) {
+            try {
+              const saved = await createLibraryFile({
+                projectId: pid, name: file.name, type, mimeType: entry.mimeType,
+                size: file.size, s3Key: result.s3Key, publicUrl: result.url,
+                tags: [], origin: "uploaded",
+              })
+              entry.id = saved.id
+              entry.thumbnailUrl = saved.thumbnailUrl || entry.thumbnailUrl
+            } catch {
+              // Backend save failed — file still accessible via S3 URL
+            }
+          }
+
+          return entry
         })
       )
       addFiles(prepared)
@@ -247,6 +272,10 @@ export default function LibraryPage() {
     removeFile(file.id)
     if (file.url.startsWith("blob:")) URL.revokeObjectURL(file.url)
     try { await deleteBlob(file.id) } catch {}
+    // Delete from S3 + backend if uploaded remotely
+    if (file.s3Key) {
+      try { await deleteLibraryFile(file.id) } catch {}
+    }
   }
 
   // ── Add ref image (from file picker) ──
@@ -371,19 +400,39 @@ export default function LibraryPage() {
           const { blob, contentType } = result
           const id = uid()
           const objectUrl = URL.createObjectURL(blob)
-          try { await saveBlob(id, blob) } catch {}
 
           const fileType = contentType.startsWith("video") ? "video" : "image"
           const ext = fileType === "video" ? "mp4" : "png"
           const mime = fileType === "video" ? "video/mp4" : "image/png"
 
-          addFile({
+          // Try S3 upload for generated content
+          const uploadResult = await saveBlobAdaptive(id, blob, pid)
+
+          const entry: LibraryFile = {
             id, name: `gen_${Date.now()}.${ext}`, type: fileType, mimeType: mime,
-            size: blob.size, url: objectUrl, thumbnailUrl: fileType === "image" ? objectUrl : undefined,
+            size: blob.size, url: uploadResult.remote ? uploadResult.url : objectUrl,
+            thumbnailUrl: uploadResult.thumbnailUrl || (fileType === "image" ? objectUrl : undefined),
             createdAt: Date.now(), updatedAt: Date.now(), tags: [],
             projectId: pid, folder: "/", origin: "generated",
             prompt: snap.userPrompt, model: snap.modelId, fullPrompt: snap.fullPrompt,
-          })
+            s3Key: uploadResult.s3Key, publicUrl: uploadResult.remote ? uploadResult.url : undefined,
+          }
+
+          if (uploadResult.remote && uploadResult.s3Key) {
+            try {
+              const saved = await createLibraryFile({
+                projectId: pid, name: entry.name, type: fileType, mimeType: mime,
+                size: blob.size, s3Key: uploadResult.s3Key, publicUrl: uploadResult.url,
+                tags: [], origin: "generated", prompt: snap.userPrompt, model: snap.modelId,
+              })
+              entry.id = saved.id
+              entry.thumbnailUrl = saved.thumbnailUrl || entry.thumbnailUrl
+            } catch {
+              // Backend save failed — file still accessible
+            }
+          }
+
+          addFile(entry)
 
           updateJob(jobId, { status: "done", progress: 100, thumbnailUrl: fileType === "image" ? objectUrl : undefined })
         } catch (err) {
