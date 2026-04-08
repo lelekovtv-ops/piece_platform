@@ -70,6 +70,8 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL=${{ vars.STAGE_URL }}/api
           WS_CORS_ORIGINS=${{ vars.STAGE_URL }}
           FRONTEND_URL=${{ vars.STAGE_URL }}
+          S3_PUBLIC_URL=${{ vars.STAGE_URL }}/storage/koza-uploads
+          IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
           GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           ENVEOF
           sed -i 's/^          //' .env.staging

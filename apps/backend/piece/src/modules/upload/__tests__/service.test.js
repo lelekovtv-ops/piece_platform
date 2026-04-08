@@ -21,6 +21,12 @@ vi.mock('../../../utils/logger.js', () => ({
   })),
 }));
 
+vi.mock('../../../utils/imagor.js', () => ({
+  thumbnailUrl: vi.fn((key) => `/img/thumb/${key}`),
+  previewUrl: vi.fn((key) => `/img/preview/${key}`),
+  videoThumbnailUrl: vi.fn((key) => `/img/video/${key}`),
+}));
+
 const { uploadService } = await import('../service.js');
 
 describe('UploadService', () => {
@@ -43,11 +49,19 @@ describe('UploadService', () => {
   });
 
   describe('confirmUpload', () => {
-    it('should confirm existing object', async () => {
-      const result = await uploadService.confirmUpload('some/key');
+    it('should confirm existing object with image thumbnails', async () => {
+      const result = await uploadService.confirmUpload('some/key', 'image/png');
 
       expect(result.key).toBe('some/key');
       expect(result.publicUrl).toContain('some/key');
+      expect(result.thumbnailUrl).toBe('/img/thumb/some/key');
+      expect(result.previewUrl).toBe('/img/preview/some/key');
+    });
+
+    it('should return video thumbnails for video content', async () => {
+      const result = await uploadService.confirmUpload('some/video.mp4', 'video/mp4');
+
+      expect(result.thumbnailUrl).toBe('/img/video/some/video.mp4');
     });
 
     it('should throw UPLOAD_NOT_FOUND if object does not exist', async () => {

@@ -15,6 +15,9 @@ x-common-env: &common-env
   ENCRYPTION_KEY: ${ENCRYPTION_KEY}
   QDRANT_URL: http://qdrant:6333
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9006/koza-uploads}
+  IMAGOR_SECRET: ${IMAGOR_SECRET:-imagor-dev-secret-change-me}
+  IMAGOR_BASE_URL: ${IMAGOR_BASE_URL:-/img}
   FROM_EMAIL: ${FROM_EMAIL:-noreply@localhost}
   FROM_NAME: ${FROM_NAME:-piece}
   SES_REGION: ${SES_REGION:-eu-central-1}
@@ -162,6 +165,8 @@ services:
       mc mb --ignore-existing local/koza-uploads &&
       mc mb --ignore-existing local/koza-temp &&
       mc mb --ignore-existing local/koza-exports &&
+      mc mb --ignore-existing local/koza-processed &&
+      mc ilm rule add local/koza-processed --expire-days 30 &&
       echo 'Buckets created successfully'
       "
     environment:
@@ -198,6 +203,38 @@ services:
   # ============================================================
   # Backend Services — Add your services below
   # ============================================================
+
+  imagorvideo:
+    image: shumc/imagorvideo
+    restart: unless-stopped
+    environment:
+      IMAGOR_SECRET: ${IMAGOR_SECRET:-imagor-dev-secret-change-me}
+      IMAGOR_AUTO_WEBP: 1
+      IMAGOR_CACHE_HEADER_TTL: 168h
+      IMAGOR_PROCESS_CONCURRENCY: 10
+      IMAGOR_REQUEST_TIMEOUT: 15s
+      HTTP_LOADER_ALLOWED_SOURCES: ""
+      S3_LOADER_BUCKET: koza-uploads
+      S3_RESULT_STORAGE_BUCKET: koza-processed
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: 1
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      VIPS_CONCURRENCY: 4
+      VIPS_MAX_ANIMATION_FRAMES: 60
+      VIPS_STRIP_METADATA: 1
+      PROMETHEUS_BIND: ":5001"
+      PORT: 8000
+    depends_on:
+      minio:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8000/healthcheck"]
+      <<: *common-healthcheck
   #
   # Template for a new service:
   #

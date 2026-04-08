@@ -1,12 +1,16 @@
 import { randomBytes } from 'node:crypto';
 import { s3Service } from './s3.js';
 import { createComponentLogger } from '../../utils/logger.js';
+import { thumbnailUrl, previewUrl, videoThumbnailUrl } from '../../utils/imagor.js';
 
 const componentLogger = createComponentLogger('UploadService');
 
 const tempStore = new Map();
 const MAX_TEMP_FILES = 200;
 const TEMP_TTL_MS = 30 * 60 * 1000;
+
+const VIDEO_CONTENT_TYPES = ['video/mp4', 'video/webm'];
+const IMAGE_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 async function createPresignedUpload({ teamId, projectId, filename, contentType, folder = 'uploads' }) {
   const key = s3Service.buildKey({ teamId, projectId, folder, filename });
@@ -16,14 +20,25 @@ async function createPresignedUpload({ teamId, projectId, filename, contentType,
   return result;
 }
 
-async function confirmUpload(key) {
+async function confirmUpload(key, contentType) {
   const exists = await s3Service.objectExists(key);
   if (!exists) {
     const error = new Error('Object not found at the specified key');
     error.code = 'UPLOAD_NOT_FOUND';
     throw error;
   }
-  return { key, publicUrl: s3Service.getPublicUrl(key) };
+
+  const result = { key, publicUrl: s3Service.getPublicUrl(key) };
+
+  if (contentType && VIDEO_CONTENT_TYPES.includes(contentType)) {
+    result.thumbnailUrl = videoThumbnailUrl(key);
+    result.previewUrl = videoThumbnailUrl(key);
+  } else if (!contentType || IMAGE_CONTENT_TYPES.includes(contentType)) {
+    result.thumbnailUrl = thumbnailUrl(key);
+    result.previewUrl = previewUrl(key);
+  }
+
+  return result;
 }
 
 function storeTempFile(dataUrl) {

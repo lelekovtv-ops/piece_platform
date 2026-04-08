@@ -39,6 +39,9 @@ const ServiceSchema = BaseConfigSchema
     S3_FORCE_PATH_STYLE: z.string().transform((val) => val === 'true').default('true'),
     S3_PUBLIC_URL: z.string().default('http://localhost:9006/koza-uploads'),
 
+    IMAGOR_SECRET: z.string().default('imagor-dev-secret-change-me'),
+    IMAGOR_BASE_URL: z.string().default(''),
+
     ANTHROPIC_API_KEY: z.string().optional(),
     OPENAI_API_KEY: z.string().optional(),
     GOOGLE_API_KEY: z.string().optional(),

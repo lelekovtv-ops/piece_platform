@@ -54,7 +54,7 @@ async function presign(req, res) {
 
 async function complete(req, res) {
   try {
-    const { key } = req.body;
+    const { key, contentType } = req.body;
 
     if (!key) {
       return res.status(400).json({
@@ -63,7 +63,7 @@ async function complete(req, res) {
       });
     }
 
-    const result = await uploadService.confirmUpload(key);
+    const result = await uploadService.confirmUpload(key, contentType);
     res.json(result);
   } catch (error) {
     if (error.code === 'UPLOAD_NOT_FOUND') {

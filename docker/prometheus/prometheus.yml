@@ -24,6 +24,13 @@ scrape_configs:
     static_configs:
       - targets: ['node-exporter:9100']
 
+  - job_name: 'imagorvideo'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['imagorvideo:5001']
+        labels:
+          service: 'imagorvideo'
+
   - job_name: 'prometheus'
     scrape_interval: 30s
     static_configs:
