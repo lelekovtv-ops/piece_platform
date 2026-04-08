@@ -21,7 +21,7 @@ export async function apiChat(
   init: RequestInit,
 ): Promise<Response> {
   const body = JSON.parse(init.body as string)
-  return chatViaBackend(body, { signal: init.signal })
+  return chatViaBackend(body, { signal: init.signal ?? undefined })
 }
 
 /**
