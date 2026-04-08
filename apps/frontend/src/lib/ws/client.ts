@@ -32,6 +32,8 @@ export class KozaWSClient {
 
   private getDefaultUrl(): string {
     if (typeof window === "undefined") return "ws://localhost:8080"
+    const envUrl = typeof process !== "undefined" && process.env?.NEXT_PUBLIC_WS_URL
+    if (envUrl) return envUrl
     const proto = window.location.protocol === "https:" ? "wss:" : "ws:"
     return `${proto}//${window.location.hostname}:8080`
   }

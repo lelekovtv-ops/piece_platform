@@ -4,13 +4,14 @@
   "private": true,
   "packageManager": "pnpm@10.30.3",
   "scripts": {
-    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\" \"pnpm run dev:ws\"",
     "dev:backend": "./dev.sh",
     "dev:frontend": "pnpm exec nx run @piece/frontend:dev",
+    "dev:ws": "cd apps/frontend/server && npx tsx src/index.ts",
     "build": "pnpm exec nx run-many -t build",
     "test": "pnpm exec nx run-many -t test",
     "lint": "pnpm exec nx run-many -t lint",
-    "infra": "docker compose up -d mongodb redis nats minio qdrant",
+    "infra": "docker compose up -d mongodb redis nats minio qdrant postgres",
     "infra:stop": "docker compose down"
   },
   "devDependencies": {
