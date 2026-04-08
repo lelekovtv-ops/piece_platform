@@ -43,6 +43,8 @@ const ServiceSchema = BaseConfigSchema
     OPENAI_API_KEY: z.string().optional(),
     GOOGLE_API_KEY: z.string().optional(),
     PEXELS_API_KEY: z.string().optional(),
+    SJINN_API_KEY: z.string().optional(),
+    TRIPO_API_KEY: z.string().optional(),
 
     QDRANT_URL: z.string().default('http://localhost:6337'),
   });

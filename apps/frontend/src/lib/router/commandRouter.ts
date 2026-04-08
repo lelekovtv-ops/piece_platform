@@ -1,3 +1,4 @@
+import { apiClassifyIntent } from "@/lib/api"
 /**
  * Command Router — three-tier classification.
  *
@@ -89,7 +90,7 @@ const LLM_INTENT_MAP: Record<string, Intent> = {
 
 async function llmClassify(input: string): Promise<RouteResult> {
   try {
-    const res = await fetch("/api/classify-intent", {
+    const res = await apiClassifyIntent("/api/classify-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ input }),

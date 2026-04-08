@@ -1,4 +1,5 @@
 "use client"
+import { apiChat } from "@/lib/api"
 
 import { useCallback, useMemo, useRef, useState } from "react"
 import { Sparkles, Send, Minimize2, X } from "lucide-react"
@@ -57,7 +58,7 @@ export default function BoardAssistant() {
     setIsLoading(true)
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await apiChat("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

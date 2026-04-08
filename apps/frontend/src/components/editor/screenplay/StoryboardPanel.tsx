@@ -1,4 +1,5 @@
 "use client"
+import { apiChat } from "@/lib/api"
 
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -1166,7 +1167,7 @@ export function StoryboardPanel({
       const relevantCharacters = characters.filter((character) => !selectedSceneId || character.sceneIds.includes(selectedSceneId))
       const relevantLocations = locations.filter((location) => !selectedSceneId || location.sceneIds.includes(selectedSceneId))
 
-      const response = await fetch("/api/chat", {
+      const response = await apiChat("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1277,7 +1278,7 @@ export function StoryboardPanel({
       ]
 
 
-      const res = await fetch("/api/chat", {
+      const res = await apiChat("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

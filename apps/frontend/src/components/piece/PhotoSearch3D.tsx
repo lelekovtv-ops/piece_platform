@@ -1,4 +1,5 @@
 "use client"
+import { apiSearchImages } from "@/lib/api"
 
 import { useState, useEffect, useRef, useCallback } from "react"
 import type { HandState } from "@/hooks/useHandTracking"
@@ -86,7 +87,7 @@ export function PhotoSearch3D({ open, onClose, onSelect, hand, cameraReady, gest
     setLoading(true)
     setEntered(false)
     try {
-      const res = await fetch("/api/search-images", {
+      const res = await apiSearchImages("/api/search-images", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: q.trim(), count: 12 }),

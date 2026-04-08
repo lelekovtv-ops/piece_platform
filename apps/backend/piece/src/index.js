@@ -18,6 +18,7 @@ import { registerGenerationRoutes } from './modules/generation/routes.js';
 import { registerPipelineRoutes } from './modules/pipeline/routes.js';
 import { registerSettingsRoutes } from './modules/settings/routes.js';
 import { registerTranslateRoutes } from './modules/translate/routes.js';
+import { registerKozaToolsRoutes } from './modules/koza-tools/routes.js';
 
 const componentLogger = createComponentLogger('Application');
 
@@ -66,6 +67,7 @@ const setupApp = () => {
   registerPipelineRoutes(app, authMiddleware);
   registerSettingsRoutes(app, authMiddleware);
   registerTranslateRoutes(app, authMiddleware);
+  registerKozaToolsRoutes(app, authMiddleware);
 
   app.use('*', (req, res) => {
     res.status(404).json({ error: 'NOT_FOUND', message: 'Route not found' });

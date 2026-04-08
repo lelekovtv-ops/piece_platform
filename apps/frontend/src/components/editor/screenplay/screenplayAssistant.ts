@@ -1,3 +1,4 @@
+import { apiChat } from "@/lib/api"
 import { Editor, Node, Point, Range } from "slate"
 import { DEFAULT_TEXT_MODEL_ID } from "@/lib/models"
 import {
@@ -297,7 +298,7 @@ export async function requestScreenplayAssistantReplacement(
     payload.selectedText,
   ].join("\n")
 
-  const res = await fetch("/api/chat", {
+  const res = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

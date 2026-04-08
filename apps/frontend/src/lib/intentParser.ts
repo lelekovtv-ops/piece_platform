@@ -1,3 +1,4 @@
+import { apiClassifyIntent } from "@/lib/api"
 import type { PanelId } from "@/store/panels"
 
 export type Intent =
@@ -87,7 +88,7 @@ export async function parseIntentAsync(input: string): Promise<Intent> {
 
   // 1-6 words: ask LLM to classify
   try {
-    const res = await fetch("/api/classify-intent", {
+    const res = await apiClassifyIntent("/api/classify-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ input: trimmed }),
@@ -190,7 +191,7 @@ export async function parseSessionCommand(input: string, sessions: SessionInfo[]
 
   try {
     const system = buildSessionPrompt(sessions)
-    const res = await fetch("/api/classify-intent", {
+    const res = await apiClassifyIntent("/api/classify-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ input: input.trim(), system }),

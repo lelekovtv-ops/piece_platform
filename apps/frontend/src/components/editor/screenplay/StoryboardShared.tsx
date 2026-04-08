@@ -1,4 +1,5 @@
 "use client"
+import { apiChat } from "@/lib/api"
 
 import Image from "next/image"
 import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react"
@@ -440,7 +441,7 @@ export function SceneBibleBubble({
       // Find entries without descriptions for auto-fill
       const needDescription = existingEntries.filter((e) => !e.prompt.trim())
 
-      const res = await fetch("/api/chat", {
+      const res = await apiChat("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

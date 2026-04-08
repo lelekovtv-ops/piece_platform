@@ -1,3 +1,4 @@
+import { apiGptImage } from "@/lib/api"
 /**
  * Blob storage adapter — dual mode:
  * - Online + authenticated: upload to S3 (MinIO/B2/R2) via presigned URL
@@ -20,7 +21,7 @@ export async function saveBlobAdaptive(
   // Try remote upload if we have a session
   if (projectId) {
     try {
-      const res = await fetch("/api/upload", {
+      const res = await apiGptImage("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,3 +1,4 @@
+import { apiChat } from "@/lib/api"
 /**
  * Fincher Breakdown — single-prompt cinematic storyboard generator.
  * Replaces the old 7-stage pipeline with one powerful prompt.
@@ -360,7 +361,7 @@ async function callLLM(
   const timeout = setTimeout(() => controller.abort(), 90_000) // 90s timeout
 
   try {
-    const response = await fetch("/api/chat", {
+    const response = await apiChat("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       signal: controller.signal,

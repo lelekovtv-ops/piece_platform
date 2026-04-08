@@ -1,4 +1,5 @@
 "use client"
+import { apiChat, apiTranslate } from "@/lib/api"
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react"
 import { trySaveBlob, loadBlob, restoreAllBlobs } from "@/lib/fileStorage"
@@ -855,7 +856,7 @@ const DEFAULT_CONNECTIONS = FINCHER_CONNECTIONS
 // ══════════════════════════════════════════════════════════════
 
 async function callChat(system: string, userMessage: string, model: string, temperature = 0.7): Promise<string> {
-  const res = await fetch("/api/chat", {
+  const res = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages: [{ role: "user", content: userMessage }], modelId: model, system, temperature }),
@@ -2665,7 +2666,7 @@ Respond in Russian. Current modules:\n${ctx}`,
                   <button type="button" disabled={translating || !promptText.trim()} onClick={async () => {
                     setTranslating(true)
                     try {
-                      const res = await fetch("/api/translate", {
+                      const res = await apiTranslate("/api/translate", {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ text: promptText, to: "ru" }),
                       })

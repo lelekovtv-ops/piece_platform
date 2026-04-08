@@ -1,3 +1,4 @@
+import { apiChat } from "@/lib/api"
 /**
  * Director Vision Translator
  *
@@ -60,7 +61,7 @@ export function buildDirectorVisionPrompt(input: DirectorVisionInput): string {
 export async function translateDirectorVision(input: DirectorVisionInput): Promise<string> {
   const userMessage = buildDirectorVisionPrompt(input)
 
-  const response = await fetch("/api/chat", {
+  const response = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

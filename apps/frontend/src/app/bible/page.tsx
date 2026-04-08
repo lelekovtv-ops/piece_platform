@@ -1,4 +1,5 @@
 "use client"
+import { apiChat } from "@/lib/api"
 
 import Image from "next/image"
 import Link from "next/link"
@@ -223,7 +224,7 @@ async function translateToEnglish(text: string): Promise<string> {
   if (/^[\x00-\x7F\s.,!?;:'"()-]+$/.test(text)) return text
 
   try {
-    const res = await fetch("/api/chat", {
+    const res = await apiChat("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -943,7 +944,7 @@ async function smartScanAll(
 
   const existingPropNames = existingProps.map((p) => p.name)
 
-  const res = await fetch("/api/chat", {
+  const res = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

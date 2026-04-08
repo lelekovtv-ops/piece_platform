@@ -1,3 +1,4 @@
+import { apiChat } from "@/lib/api"
 /**
  * Workers — specialized executors for each route category.
  * Extracted from the monolithic handleChat in page.tsx.
@@ -109,7 +110,7 @@ export async function executeScriptEdit(params: {
 
     try {
       cb.abortRef.current = new AbortController()
-      const res = await fetch("/api/chat", {
+      const res = await apiChat("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -184,7 +185,7 @@ export async function executeChat(params: {
 
   try {
     cb.abortRef.current = new AbortController()
-    const res = await fetch("/api/chat", {
+    const res = await apiChat("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

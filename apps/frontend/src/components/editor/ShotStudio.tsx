@@ -1,4 +1,5 @@
 "use client"
+import { apiChat, apiTranslate } from "@/lib/api"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -725,7 +726,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
     if (previewSrc) {
       try {
         const cropped = await cropMaskedRegion(previewSrc, result.mask, result.width, result.height)
-        const res = await fetch("/api/chat", {
+        const res = await apiChat("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -804,7 +805,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const fastTranslate = useCallback(async (text: string, from: string, to: string): Promise<string | null> => {
     if (!text.trim()) return ""
     try {
-      const res = await fetch("/api/translate", {
+      const res = await apiTranslate("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, from, to }),

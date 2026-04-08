@@ -1,3 +1,4 @@
+import { apiNanoBanana, apiGptImage, apiSjinnCreate, apiSjinnPoll, apiTempUpload } from "@/lib/api"
 import { getGenerationModelById } from "./registry"
 import type { GenerationProgress, GenerationRequest, GenerationResult } from "./types"
 
@@ -29,7 +30,7 @@ export async function generateContent(
 // ── OpenAI (existing /api/gpt-image route) ─────────────────────
 
 async function generateViaOpenAI(req: GenerationRequest): Promise<GenerationResult> {
-  const res = await fetch("/api/gpt-image", {
+  const res = await apiGptImage("/api/gpt-image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -52,7 +53,7 @@ async function generateViaOpenAI(req: GenerationRequest): Promise<GenerationResu
 // ── Google / Gemini (existing /api/nano-banana route) ──────────
 
 async function generateViaGoogle(req: GenerationRequest): Promise<GenerationResult> {
-  const res = await fetch("/api/nano-banana", {
+  const res = await apiNanoBanana("/api/nano-banana", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -127,7 +128,7 @@ async function compressAll(urls: string[]): Promise<string[]> {
 async function uploadToTempUrl(dataUrl: string): Promise<string> {
   if (!dataUrl.startsWith("data:")) return dataUrl // already a URL
   const compressed = await compressDataUrl(dataUrl)
-  const res = await fetch("/api/temp-upload", {
+  const res = await apiTempUpload("/api/temp-upload", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dataUrl: compressed }),
@@ -176,7 +177,7 @@ async function generateViaSJinn(
   }
 
   // Create task
-  const createRes = await fetch("/api/sjinn", {
+  const createRes = await apiSjinnCreate("/api/sjinn", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ tool_type: toolType, input }),
@@ -197,7 +198,7 @@ async function generateViaSJinn(
   while (Date.now() - start < SJINN_TIMEOUT) {
     await sleep(SJINN_POLL_INTERVAL)
 
-    const pollRes = await fetch(`/api/sjinn?taskId=${encodeURIComponent(taskId)}`)
+    const pollRes = await apiSjinnPoll(`/api/sjinn?taskId=${encodeURIComponent(taskId)}`)
     if (!pollRes.ok) {
       throw new Error(`SJinn poll failed: ${pollRes.status}`)
     }

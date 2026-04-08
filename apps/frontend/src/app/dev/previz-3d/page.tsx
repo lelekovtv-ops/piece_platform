@@ -1,4 +1,5 @@
 "use client"
+import { apiPhotoTo3d, apiPhotoTo3dPoll } from "@/lib/api"
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import Link from "next/link"
@@ -847,7 +848,7 @@ export default function Previz3DPage() {
         const base64 = await toBase64()
 
         // Step 1: Create task
-        const createRes = await fetch("/api/photo-to-3d", {
+        const createRes = await apiPhotoTo3d("/api/photo-to-3d", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: base64 }),
@@ -866,7 +867,7 @@ export default function Previz3DPage() {
           for (let i = 0; i < 120; i++) {
             await new Promise((r) => setTimeout(r, 3000))
 
-            const pollRes = await fetch(`/api/photo-to-3d?taskId=${taskId}`)
+            const pollRes = await apiPhotoTo3dPoll(`/api/photo-to-3d?taskId=${taskId}`)
             if (!pollRes.ok) continue
 
             const data = (await pollRes.json()) as {

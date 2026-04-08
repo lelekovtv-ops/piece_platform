@@ -1,3 +1,4 @@
+import { apiChat } from "@/lib/api"
 /**
  * AI-powered prompt composition for image/video generation.
  * Shared between ShotStudio (?? rewrite) and StoryboardPanel (BUILD button).
@@ -80,7 +81,7 @@ export async function buildImagePromptWithAI(
     || ctx.caption?.trim()
     || "Describe this shot visually for image generation"
 
-  const res = await fetch("/api/chat", {
+  const res = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -128,7 +129,7 @@ export async function buildShotPromptsWithAI(
 ): Promise<BuildShotResult> {
   const context = buildContextBlock(ctx)
 
-  const res = await fetch("/api/chat", {
+  const res = await apiChat("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
