@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   experimental: {
     // Disable Turbopack FS cache to prevent SST panics on unclean shutdowns
     turbopackFileSystemCacheForDev: false,

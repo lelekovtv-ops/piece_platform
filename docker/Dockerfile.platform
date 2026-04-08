@@ -7,46 +7,37 @@ WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/ ./packages/
-COPY apps/frontend/platform/ ./apps/frontend/platform/
+COPY apps/frontend/ ./apps/frontend/
 
 RUN pnpm install --frozen-lockfile
 
-ARG VITE_API_URL
-ENV VITE_API_URL=${VITE_API_URL}
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 
-WORKDIR /app/apps/frontend/platform
+WORKDIR /app/apps/frontend
 RUN pnpm run build
 
-# --- Stage 2: Serve ---
-FROM nginx:alpine
+# --- Stage 2: Run ---
+FROM node:20-alpine AS runner
 
-COPY --from=builder /app/apps/frontend/platform/dist /usr/share/nginx/html
+RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-RUN cat > /etc/nginx/conf.d/default.conf <<'NGINX'
-server {
-    listen 3000;
-    server_name _;
-    root /usr/share/nginx/html;
-    index index.html;
+WORKDIR /app
 
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
+COPY --from=builder /app/apps/frontend/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
 
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    location /health {
-        access_log off;
-        return 200 '{"status":"healthy","service":"platform"}';
-        add_header Content-Type application/json;
-    }
-}
-NGINX
+USER nextjs
 
 EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1
+
+CMD ["node", "apps/frontend/server.js"]
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/health || exit 1

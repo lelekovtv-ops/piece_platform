@@ -1,6 +1,6 @@
 FROM koza-studio-base:latest
 
-WORKDIR /app/tools/api-gateway
+WORKDIR /app/apps/backend/piece
 
 EXPOSE 3100
 
