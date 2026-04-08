@@ -47,6 +47,9 @@ const ServiceSchema = BaseConfigSchema
     TRIPO_API_KEY: z.string().optional(),
 
     QDRANT_URL: z.string().default('http://localhost:6337'),
+
+    SENTRY_DSN_BACKEND: z.string().optional(),
+    DISABLE_EMAIL_SENDING: z.string().transform((val) => val === 'true').default('false'),
   });
 
 export const config = new ServiceConfig('piece', ServiceSchema, {

@@ -90,7 +90,7 @@ async function register({ email, password, name }) {
     passwordHash,
     avatarUrl: null,
     language: 'en',
-    emailVerified: false,
+    emailVerified: config.get('DISABLE_EMAIL_SENDING') === true,
     createdAt: now,
     updatedAt: now,
   });

@@ -11,6 +11,7 @@ import {
   type AuthUser,
 } from "./auth-client"
 import { authFetch, setCurrentTeamId } from "./auth-fetch"
+import { identifyUser, resetAnalytics } from "@/lib/analytics"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4030"
 
@@ -47,6 +48,9 @@ export const useAuthStore = create<AuthState>((set) => ({
         await selectFirstTeam()
       }
       set({ user, isAuthenticated: !!user, isLoading: false })
+      if (user) {
+        identifyUser(user.id, { email: user.email, name: user.name })
+      }
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false })
     }
@@ -57,6 +61,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     setAccessToken(data.accessToken)
     setRefreshToken(data.refreshToken)
     await selectFirstTeam()
+    identifyUser(data.user.id, { email: data.user.email, name: data.user.name })
     set({ user: data.user, isAuthenticated: true })
   },
 
@@ -65,12 +70,14 @@ export const useAuthStore = create<AuthState>((set) => ({
     setAccessToken(data.accessToken)
     setRefreshToken(data.refreshToken)
     await selectFirstTeam()
+    identifyUser(data.user.id, { email: data.user.email, name: data.user.name })
     set({ user: data.user, isAuthenticated: true })
   },
 
   logout: async () => {
     await logoutApi()
     setCurrentTeamId(null)
+    resetAnalytics()
     set({ user: null, isAuthenticated: false })
   },
 }))

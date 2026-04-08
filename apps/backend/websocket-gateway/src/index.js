@@ -36,6 +36,49 @@ app.get('/health', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Connection metrics
+// ---------------------------------------------------------------------------
+let totalConnections = 0;
+
+app.get('/internal/metrics/prometheus', (_req, res) => {
+  const activeConnections = eventsNs.sockets?.size || 0;
+  const activeRooms = eventsNs.adapter?.rooms?.size || 0;
+  const mem = process.memoryUsage();
+  const cpuUsage = process.cpuUsage();
+  const uptime = process.uptime();
+
+  const lines = [
+    '# HELP ws_connections_active Current active WebSocket connections',
+    '# TYPE ws_connections_active gauge',
+    `ws_connections_active ${activeConnections}`,
+    '# HELP ws_connections_total Total WebSocket connections since start',
+    '# TYPE ws_connections_total counter',
+    `ws_connections_total ${totalConnections}`,
+    '# HELP ws_rooms_active Current active rooms',
+    '# TYPE ws_rooms_active gauge',
+    `ws_rooms_active ${activeRooms}`,
+    '# HELP process_memory_rss_bytes Resident set size in bytes',
+    '# TYPE process_memory_rss_bytes gauge',
+    `process_memory_rss_bytes ${mem.rss}`,
+    '# HELP process_heap_used_bytes Heap used in bytes',
+    '# TYPE process_heap_used_bytes gauge',
+    `process_heap_used_bytes ${mem.heapUsed}`,
+    '# HELP process_cpu_user_seconds_total CPU user time in seconds',
+    '# TYPE process_cpu_user_seconds_total counter',
+    `process_cpu_user_seconds_total ${cpuUsage.user / 1e6}`,
+    '# HELP process_cpu_system_seconds_total CPU system time in seconds',
+    '# TYPE process_cpu_system_seconds_total counter',
+    `process_cpu_system_seconds_total ${cpuUsage.system / 1e6}`,
+    '# HELP process_uptime_seconds Process uptime in seconds',
+    '# TYPE process_uptime_seconds gauge',
+    `process_uptime_seconds ${uptime}`,
+  ];
+
+  res.set('Content-Type', 'text/plain; version=0.0.4');
+  res.send(lines.join('\n') + '\n');
+});
+
+// ---------------------------------------------------------------------------
 // HTTP + Socket.IO server
 // ---------------------------------------------------------------------------
 const httpServer = createServer(app);
@@ -80,6 +123,7 @@ eventsNs.use((socket, next) => {
 
 eventsNs.on('connection', (socket) => {
   const { teamId, userId } = socket.handshake.query;
+  totalConnections++;
 
   componentLogger.info('Client connected', {
     socketId: socket.id,

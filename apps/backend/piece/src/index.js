@@ -1,4 +1,15 @@
 import { config } from './config.js';
+import * as Sentry from '@sentry/node';
+
+const sentryDsn = config.get('SENTRY_DSN_BACKEND');
+if (sentryDsn) {
+  Sentry.init({
+    dsn: sentryDsn,
+    environment: config.get('NODE_ENV'),
+    tracesSampleRate: 0.5,
+  });
+}
+
 import { logger, createComponentLogger } from './utils/logger.js';
 import { createRequestLoggingMiddleware } from '@piece/logger';
 import express from 'express';
@@ -20,6 +31,7 @@ import { registerSettingsRoutes } from './modules/settings/routes.js';
 import { registerTranslateRoutes } from './modules/translate/routes.js';
 import { registerKozaToolsRoutes } from './modules/koza-tools/routes.js';
 import { createRateLimiter } from './middleware/rate-limiter.js';
+import { buildPrometheusMetrics } from './middleware/prometheus-metrics.js';
 
 const componentLogger = createComponentLogger('Application');
 
@@ -89,6 +101,11 @@ const setupApp = () => {
       cpu: process.cpuUsage(),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  app.get('/internal/metrics/prometheus', (req, res) => {
+    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+    res.send(buildPrometheusMetrics());
   });
 
   app.setBackgroundServicesReady = (ready) => {

@@ -6,6 +6,7 @@ import { MainContent } from "@/components/app/MainContent";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { AuthProvider } from "@/components/app/AuthProvider";
 import { LockBanner } from "@/components/app/LockBanner";
+import { AnalyticsProvider } from "@/components/app/AnalyticsProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,6 +28,7 @@ export default function RootLayout({
       </head>
       <body className="antialiased flex flex-col h-screen overflow-hidden bg-[#0B0C10]">
         <AuthProvider>
+          <AnalyticsProvider />
           <ThemeProvider />
           <StorageCleanup />
           <GlobalNav />

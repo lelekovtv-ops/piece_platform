@@ -1,0 +1,117 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [stage]
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Build Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Test
+        run: pnpm test
+
+  deploy:
+    name: Deploy
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Generate .env file
+        run: |
+          cat > .env.staging << 'ENVEOF'
+          NODE_ENV=production
+          MONGO_ROOT_USER=${{ secrets.MONGO_ROOT_USER }}
+          MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
+          MONGODB_SYSTEM_DB=system
+          JWT_PUBLIC_KEY_BASE64=${{ secrets.JWT_PUBLIC_KEY_BASE64 }}
+          JWT_PRIVATE_KEY_BASE64=${{ secrets.JWT_PRIVATE_KEY_BASE64 }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          INTERNAL_TOKEN=${{ secrets.INTERNAL_TOKEN }}
+          LOG_LEVEL=INFO
+          FROM_EMAIL=${{ vars.FROM_EMAIL }}
+          FROM_NAME=${{ vars.FROM_NAME }}
+          SES_REGION=${{ vars.SES_REGION }}
+          SES_ACCESS_KEY_ID=${{ secrets.SES_ACCESS_KEY_ID }}
+          SES_SECRET_ACCESS_KEY=${{ secrets.SES_SECRET_ACCESS_KEY }}
+          SES_CONFIGURATION_SET=${{ vars.SES_CONFIGURATION_SET }}
+          DISABLE_EMAIL_SENDING=true
+          SENTRY_DSN_BACKEND=${{ secrets.SENTRY_DSN_BACKEND }}
+          NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
+          NEXT_PUBLIC_API_BASE_URL=http://${{ secrets.STAGE_HOST }}/api
+          WS_CORS_ORIGINS=http://${{ secrets.STAGE_HOST }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          ENVEOF
+
+      - name: Upload .env to staging server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.STAGE_HOST }}
+          username: ${{ secrets.STAGE_USER }}
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          source: .env.staging
+          target: ~/piece/
+
+      - name: Deploy to staging
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGE_HOST }}
+          username: ${{ secrets.STAGE_USER }}
+          key: ${{ secrets.STAGE_SSH_KEY }}
+          script_stop: true
+          script: |
+            cd ~/piece
+            mv .env.staging .env
+
+            git fetch origin stage
+            git reset --hard origin/stage
+
+            docker build -f docker/Dockerfile.base -t koza-studio-base:latest .
+            docker compose build --parallel
+            docker compose up -d --remove-orphans --force-recreate
+
+            echo "Waiting for services to be healthy..."
+            for i in $(seq 1 20); do
+              if curl -sf http://127.0.0.1:3100/health > /dev/null 2>&1; then
+                echo "Backend healthy after ${i}0 seconds"
+                break
+              fi
+              if [ "$i" -eq 20 ]; then
+                echo "Health check failed after 200 seconds"
+                docker compose logs --tail=50
+                exit 1
+              fi
+              sleep 10
+            done
+
+            echo "Staging deploy complete"
+            docker compose ps

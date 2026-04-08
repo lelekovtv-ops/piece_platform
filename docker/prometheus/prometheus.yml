@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'piece-backend'
+    scrape_interval: 15s
+    metrics_path: /internal/metrics/prometheus
+    static_configs:
+      - targets: ['api-gateway:3100']
+        labels:
+          service: 'piece-backend'
+
+  - job_name: 'websocket-gateway'
+    scrape_interval: 15s
+    metrics_path: /internal/metrics/prometheus
+    static_configs:
+      - targets: ['websocket-gateway:3109']
+        labels:
+          service: 'websocket-gateway'
+
+  - job_name: 'node-exporter'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'prometheus'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['localhost:9090']
