@@ -48,7 +48,7 @@ const ServiceSchema = BaseConfigSchema
 
     QDRANT_URL: z.string().default('http://localhost:6337'),
 
-    SENTRY_DSN_BACKEND: z.string().optional(),
+    SENTRY_DSN_BACKEND: z.string().default(''),
     DISABLE_EMAIL_SENDING: z.string().transform((val) => val === 'true').default('false'),
   });
 

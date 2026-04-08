@@ -249,7 +249,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.platform
       args:
-        VITE_API_URL: https://api.localhost
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost/api}
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -258,7 +258,7 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       <<: *common-healthcheck
 
   # ============================================================
