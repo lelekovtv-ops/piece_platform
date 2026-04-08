@@ -15,4 +15,9 @@ export async function initializeSystemIndexes() {
 
   const userSettings = getGlobalSystemCollection('user_settings');
   await userSettings.createIndex({ userId: 1, storeKey: 1 }, { unique: true });
+
+  const refreshTokens = getGlobalSystemCollection('refresh_tokens');
+  await refreshTokens.createIndex({ token: 1 });
+  await refreshTokens.createIndex({ userId: 1 });
+  await refreshTokens.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 }

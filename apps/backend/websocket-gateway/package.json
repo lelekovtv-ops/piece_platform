@@ -13,9 +13,12 @@
     "@piece/config": "*",
     "@piece/logger": "*",
     "@piece/cors-middleware": "*",
+    "@piece/auth-middleware": "*",
     "@piece/pubsub": "*",
     "express": "^4.21.0",
     "helmet": "^8.0.0",
+    "ioredis": "^5.4.0",
+    "@socket.io/redis-adapter": "^8.3.0",
     "socket.io": "^4.8.0"
   }
 }

@@ -93,5 +93,20 @@ export function createAuthMiddleware({ config }) {
     next();
   }
 
-  return { authenticateToken, authenticateInternalToken, optionalAuth };
+  function verifyToken(token) {
+    try {
+      const rawToken = token?.startsWith('Bearer ') ? token.slice(7) : token;
+      const decoded = jwt.verify(rawToken, publicKey, { algorithms: ['RS256'] });
+      return {
+        id: decoded.sub || decoded.id,
+        email: decoded.email,
+        role: decoded.role,
+        ...decoded,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  return { authenticateToken, authenticateInternalToken, optionalAuth, verifyToken };
 }

@@ -19,6 +19,7 @@ import { registerPipelineRoutes } from './modules/pipeline/routes.js';
 import { registerSettingsRoutes } from './modules/settings/routes.js';
 import { registerTranslateRoutes } from './modules/translate/routes.js';
 import { registerKozaToolsRoutes } from './modules/koza-tools/routes.js';
+import { createRateLimiter } from './middleware/rate-limiter.js';
 
 const componentLogger = createComponentLogger('Application');
 
@@ -30,15 +31,63 @@ const setupApp = () => {
   app.use(corsMiddleware);
   app.use(express.json({ limit: '10mb' }));
   app.use(createRequestLoggingMiddleware(logger));
+  app.use(createRateLimiter({ maxRequests: 100, windowSeconds: 60 }));
 
   let backgroundServicesReady = false;
 
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'healthy',
+  app.get('/health', async (req, res) => {
+    const checks = { mongodb: 'unknown', redis: 'unknown' };
+
+    try {
+      const { getSystemDb } = await import('@piece/multitenancy');
+      const db = getSystemDb();
+      if (db) {
+        await db.command({ ping: 1 });
+        checks.mongodb = 'connected';
+      } else {
+        checks.mongodb = 'not initialized';
+      }
+    } catch {
+      checks.mongodb = 'disconnected';
+    }
+
+    try {
+      const { getRedisClient } = await import('@piece/cache');
+      const redis = getRedisClient();
+      if (redis) {
+        await redis.ping();
+        checks.redis = 'connected';
+      } else {
+        checks.redis = 'not initialized';
+      }
+    } catch {
+      checks.redis = 'disconnected';
+    }
+
+    const allHealthy = checks.mongodb !== 'disconnected' && checks.redis !== 'disconnected';
+
+    res.status(allHealthy ? 200 : 503).json({
+      status: allHealthy ? 'healthy' : 'degraded',
       service: config.get('SERVICE_NAME'),
       timestamp: new Date().toISOString(),
       backgroundServices: backgroundServicesReady ? 'ready' : 'initializing',
+      checks,
+    });
+  });
+
+  app.get('/internal/metrics', (req, res) => {
+    const mem = process.memoryUsage();
+    res.json({
+      service: config.get('SERVICE_NAME'),
+      uptime: process.uptime(),
+      memory: {
+        rss: Math.round(mem.rss / 1024 / 1024),
+        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        external: Math.round(mem.external / 1024 / 1024),
+      },
+      cpu: process.cpuUsage(),
+      timestamp: new Date().toISOString(),
     });
   });
 

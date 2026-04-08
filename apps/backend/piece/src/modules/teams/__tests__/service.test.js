@@ -35,6 +35,19 @@ vi.mock('../../../utils/logger.js', () => ({
   })),
 }));
 
+const mockCacheGet = vi.fn().mockResolvedValue(null);
+const mockCacheSet = vi.fn().mockResolvedValue(undefined);
+const mockCacheDel = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('@piece/cache', () => ({
+  createCache: vi.fn(() => ({
+    get: mockCacheGet,
+    set: mockCacheSet,
+    del: mockCacheDel,
+  })),
+  StandardTTL: { SHORT: 60, MEDIUM: 300, LONG: 3600 },
+}));
+
 vi.mock('../../../db/index.js', () => ({
   initializeTeamDatabase: vi.fn().mockResolvedValue(undefined),
 }));
@@ -143,6 +156,24 @@ describe('TeamService', () => {
       const role = await teamService.getMemberRole('team-1', 'user-99');
 
       expect(role).toBeNull();
+    });
+
+    it('should return cached role without DB query on cache hit', async () => {
+      mockCacheGet.mockResolvedValueOnce('admin');
+
+      const role = await teamService.getMemberRole('team-1', 'user-1');
+
+      expect(role).toBe('admin');
+      expect(mockFindOne).not.toHaveBeenCalled();
+    });
+
+    it('should cache role after DB query on cache miss', async () => {
+      mockCacheGet.mockResolvedValueOnce(null);
+      mockFindOne.mockResolvedValueOnce({ role: 'manager' });
+
+      await teamService.getMemberRole('team-1', 'user-1');
+
+      expect(mockCacheSet).toHaveBeenCalled();
     });
   });
 });

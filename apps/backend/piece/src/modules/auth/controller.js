@@ -1,6 +1,8 @@
 import { authService } from './service.js';
 import { generateMagicLink, sendMagicLinkEmail, verifyMagicLink } from './magic-link-service.js';
-import { validateEmailDomain } from '@piece/validation/email';
+import { validateEmailDomain, validateMxRecord } from '@piece/validation/email';
+import { createAccountLockout } from '@piece/cache/accountLockout';
+import { getRedisClient } from '@piece/cache';
 import { createComponentLogger } from '../../utils/logger.js';
 import { config } from '../../config.js';
 
@@ -8,6 +10,18 @@ const componentLogger = createComponentLogger('AuthController');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
+
+let _lockout = null;
+
+function getLockout() {
+  if (!_lockout) {
+    const redis = getRedisClient();
+    if (redis) {
+      _lockout = createAccountLockout(redis, { maxAttempts: 5, lockoutSeconds: 900 });
+    }
+  }
+  return _lockout;
+}
 
 async function register(req, res) {
   try {
@@ -31,6 +45,14 @@ async function register(req, res) {
       return res.status(400).json({
         error: 'DISPOSABLE_EMAIL',
         message: 'Disposable email addresses are not allowed',
+      });
+    }
+
+    const hasMx = await validateMxRecord(email);
+    if (!hasMx) {
+      return res.status(400).json({
+        error: 'INVALID_EMAIL_DOMAIN',
+        message: 'Email domain does not accept mail',
       });
     }
 
@@ -60,9 +82,28 @@ async function login(req, res) {
       });
     }
 
+    const lockout = getLockout();
+    if (lockout) {
+      const { locked, ttl } = await lockout.isLocked(email);
+      if (locked) {
+        return res.status(429).json({
+          error: 'ACCOUNT_LOCKED',
+          message: 'Too many failed login attempts. Please try again later.',
+          retryAfter: ttl,
+        });
+      }
+    }
+
     const result = await authService.login({ email, password });
     if (!result) {
+      if (lockout) {
+        await lockout.recordFailedAttempt(email);
+      }
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid credentials' });
+    }
+
+    if (lockout) {
+      await lockout.resetAttempts(email);
     }
 
     componentLogger.info('User logged in', { email });

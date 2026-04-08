@@ -1,9 +1,12 @@
 import { getGlobalSystemCollection } from '@piece/multitenancy';
 import { mongoIdUtils } from '@piece/validation/mongo';
+import { createCache, StandardTTL } from '@piece/cache';
 import { createComponentLogger } from '../../utils/logger.js';
 import { initializeTeamDatabase } from '../../db/index.js';
 
 const componentLogger = createComponentLogger('TeamService');
+
+const memberRoleCache = createCache({ prefix: 'membership' });
 
 function getTeamsCollection() {
   return getGlobalSystemCollection('teams');
@@ -146,6 +149,7 @@ async function removeMember(teamId, userId) {
   });
   if (result.deletedCount === 0) return false;
 
+  await memberRoleCache.del(`${teamId}:${userId}`);
   componentLogger.info('Member removed', { teamId, userId });
   return true;
 }
@@ -164,12 +168,22 @@ async function getMembers(teamId) {
 }
 
 async function getMemberRole(teamId, userId) {
+  const cacheKey = `${teamId}:${userId}`;
+  const cached = await memberRoleCache.get(cacheKey);
+  if (cached) return cached;
+
   const members = getMembersCollection();
   const member = await members.findOne({
     teamId: mongoIdUtils.toObjectId(teamId),
     userId: mongoIdUtils.toObjectId(userId),
   });
-  return member?.role || null;
+  const role = member?.role || null;
+
+  if (role) {
+    await memberRoleCache.set(cacheKey, role, StandardTTL.MEDIUM);
+  }
+
+  return role;
 }
 
 export const teamService = {

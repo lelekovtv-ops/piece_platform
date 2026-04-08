@@ -5,6 +5,7 @@ vi.mock('@piece/multitenancy', () => {
     findOne: vi.fn(),
     insertOne: vi.fn(),
     deleteOne: vi.fn(),
+    deleteMany: vi.fn(),
   };
   return {
     getGlobalSystemCollection: vi.fn(() => mockCollection),
@@ -201,6 +202,25 @@ describe('AuthService', () => {
       });
 
       expect(result).toBeNull();
+    });
+
+    it('should clean up old refresh tokens on login', async () => {
+      mockCollection.findOne.mockResolvedValueOnce({
+        _id: 'user-id',
+        email: 'test@example.com',
+        name: 'Test',
+        passwordHash: '$2b$12$hashed',
+      });
+      mockCollection.deleteMany.mockResolvedValueOnce({ deletedCount: 2 });
+      mockCollection.insertOne.mockResolvedValueOnce({ insertedId: 'token-id' });
+
+      await authService.login({ email: 'test@example.com', password: 'password123' });
+
+      expect(mockCollection.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-id',
+        }),
+      );
     });
   });
 

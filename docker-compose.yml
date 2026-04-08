@@ -187,6 +187,10 @@ services:
       - "3100:3100"
     depends_on:
       <<: *infra-depends
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3100/health"]
       <<: *common-healthcheck
@@ -227,6 +231,10 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
       <<: *common-healthcheck
@@ -245,6 +253,10 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
+    deploy:
+      resources:
+        limits:
+          memory: 256M
     depends_on:
       - api-gateway
       - platform

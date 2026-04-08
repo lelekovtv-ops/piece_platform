@@ -9,6 +9,8 @@ type MessageHandler = (msg: ServerMessage) => void
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000]
 const HEARTBEAT_INTERVAL = 30_000
+const MAX_OFFLINE_QUEUE_SIZE = 1000
+const MAX_PENDING_OPS = 500
 
 export class KozaWSClient {
   private ws: WebSocket | null = null
@@ -164,7 +166,14 @@ export class KozaWSClient {
   sendOp(op: Operation): Promise<void> {
     if (!this._connected || !this._authenticated) {
       this.offlineQueue.push(op)
+      if (this.offlineQueue.length > MAX_OFFLINE_QUEUE_SIZE) {
+        this.offlineQueue = this.offlineQueue.slice(-MAX_OFFLINE_QUEUE_SIZE)
+      }
       return Promise.resolve()
+    }
+
+    if (this.pendingOps.size >= MAX_PENDING_OPS) {
+      return Promise.reject("Too many pending operations")
     }
 
     this.send({ type: "op", op })

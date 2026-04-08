@@ -106,6 +106,8 @@ const DEFAULT_SHOT_DURATION = 3000
 const DEFAULT_ZOOM = 100
 const MIN_ZOOM = 20
 const MAX_ZOOM = 500
+const MAX_CACHED_PROJECTS = 5
+const MAX_GENERATION_HISTORY = 20
 
 const createId = () => {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -196,7 +198,7 @@ export const createTimelineShot = (partial: Partial<TimelineShot> = {}): Timelin
   originalUrl: partial.originalUrl ?? null,
   thumbnailBlobKey: partial.thumbnailBlobKey ?? null,
   originalBlobKey: partial.originalBlobKey ?? null,
-  generationHistory: partial.generationHistory ?? [],
+  generationHistory: (partial.generationHistory ?? []).slice(-MAX_GENERATION_HISTORY),
   activeHistoryIndex: partial.activeHistoryIndex ?? null,
   sceneId: partial.sceneId ?? null,
   label: partial.label?.trim() || "Untitled Shot",
@@ -470,7 +472,7 @@ export const useTimelineStore = create<TimelineState>()(
       activateNode: (id) => set({ activateNodeId: id }),
       setActiveProject: (projectId) => {
         set((state) => {
-          const projectTimelines = state.activeProjectId
+          let projectTimelines = state.activeProjectId
             ? {
                 ...state.projectTimelines,
                 [state.activeProjectId]: {
@@ -479,6 +481,15 @@ export const useTimelineStore = create<TimelineState>()(
                 },
               }
             : state.projectTimelines
+
+          // Evict oldest cached projects if over limit
+          const keys = Object.keys(projectTimelines)
+          if (keys.length > MAX_CACHED_PROJECTS) {
+            const keep = keys.slice(-MAX_CACHED_PROJECTS)
+            projectTimelines = Object.fromEntries(
+              keep.map((k) => [k, projectTimelines[k]]),
+            )
+          }
 
           if (!projectId) {
             return {

@@ -4,6 +4,7 @@ import { getGlobalSystemCollection } from '@piece/multitenancy';
 import { mongoIdUtils } from '@piece/validation/mongo';
 import { createComponentLogger } from '../../utils/logger.js';
 import { config } from '../../config.js';
+import { teamService } from '../teams/service.js';
 
 const componentLogger = createComponentLogger('AuthService');
 
@@ -18,12 +19,16 @@ function getRefreshTokensCollection() {
   return getGlobalSystemCollection('refresh_tokens');
 }
 
+let _cachedPrivateKey = null;
+
 function getPrivateKey() {
+  if (_cachedPrivateKey) return _cachedPrivateKey;
   const base64 = config.get('JWT_PRIVATE_KEY_BASE64');
   if (!base64) {
     throw new Error('JWT_PRIVATE_KEY_BASE64 is not configured');
   }
-  return Buffer.from(base64, 'base64').toString('utf8');
+  _cachedPrivateKey = Buffer.from(base64, 'base64').toString('utf8');
+  return _cachedPrivateKey;
 }
 
 function signAccessToken(payload) {
@@ -101,6 +106,14 @@ async function register({ email, password, name }) {
     expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
   });
 
+  try {
+    const teamName = name?.trim() || normalizedEmail.split('@')[0];
+    await teamService.create({ name: `${teamName}'s Team`, ownerId: userId });
+    componentLogger.info('Personal team created for user', { userId });
+  } catch (teamError) {
+    componentLogger.warn('Failed to create personal team', { userId, error: teamError.message });
+  }
+
   componentLogger.info('User registered', { userId, email: normalizedEmail });
 
   const user = await users.findOne({ _id: result.insertedId });
@@ -127,7 +140,14 @@ async function login({ email, password }) {
   const refreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
 
   const now = new Date();
-  await getRefreshTokensCollection().insertOne({
+  const refreshTokens = getRefreshTokensCollection();
+
+  await refreshTokens.deleteMany({
+    userId: user._id,
+    createdAt: { $lt: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+  });
+
+  await refreshTokens.insertOne({
     userId: user._id,
     token: refreshToken,
     createdAt: now,

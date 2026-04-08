@@ -1,13 +1,16 @@
 import { Router } from 'express';
 import { authController } from './controller.js';
+import { createRateLimiter } from '../../middleware/rate-limiter.js';
 
 const router = Router();
 
-router.post('/v1/auth/register', authController.register);
-router.post('/v1/auth/login', authController.login);
-router.post('/v1/auth/magic-link', authController.sendMagicLink);
-router.post('/v1/auth/magic-link/verify', authController.verifyMagicToken);
-router.post('/v1/auth/refresh', authController.refresh);
+const authLimiter = createRateLimiter({ maxRequests: 10, windowSeconds: 60 });
+
+router.post('/v1/auth/register', authLimiter, authController.register);
+router.post('/v1/auth/login', authLimiter, authController.login);
+router.post('/v1/auth/magic-link', authLimiter, authController.sendMagicLink);
+router.post('/v1/auth/magic-link/verify', authLimiter, authController.verifyMagicToken);
+router.post('/v1/auth/refresh', authLimiter, authController.refresh);
 
 export function registerAuthRoutes(app, { authenticateToken } = {}) {
   if (authenticateToken) {

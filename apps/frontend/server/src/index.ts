@@ -51,6 +51,7 @@ interface PresenceInfo {
 // ── State ──
 
 const clients = new Map<WebSocket, ClientState>()
+const projectClients = new Map<string, Set<WebSocket>>()
 const presence = new Map<string, { name: string; cursor: PresenceInfo["cursor"] }>()  // userId → presence
 
 // ── Helpers ──
@@ -62,8 +63,10 @@ function send(ws: WebSocket, msg: ServerMessage) {
 }
 
 function broadcastToProject(projectId: string, msg: ServerMessage, excludeWs?: WebSocket) {
-  for (const [ws, state] of clients) {
-    if (state.projectId === projectId && ws !== excludeWs) {
+  const members = projectClients.get(projectId)
+  if (!members) return
+  for (const ws of members) {
+    if (ws !== excludeWs) {
       send(ws, msg)
     }
   }
@@ -71,8 +74,11 @@ function broadcastToProject(projectId: string, msg: ServerMessage, excludeWs?: W
 
 function getPresenceList(projectId: string): PresenceInfo[] {
   const list: PresenceInfo[] = []
-  for (const [, state] of clients) {
-    if (state.projectId === projectId) {
+  const members = projectClients.get(projectId)
+  if (!members) return list
+  for (const ws of members) {
+    const state = clients.get(ws)
+    if (state) {
       const p = presence.get(state.user.userId)
       list.push({
         userId: state.user.userId,
@@ -146,6 +152,12 @@ wss.on("connection", (ws) => {
 
       state.projectId = msg.projectId
 
+      // Add to project index
+      if (!projectClients.has(msg.projectId)) {
+        projectClients.set(msg.projectId, new Set())
+      }
+      projectClients.get(msg.projectId)!.add(ws)
+
       // Send snapshot
       const [snapshot, locks] = await Promise.all([
         getProjectSnapshot(msg.projectId),
@@ -177,6 +189,7 @@ wss.on("connection", (ws) => {
       if (state.projectId) {
         await releaseAllUserLocks(state.projectId, state.user.userId)
         broadcastToProject(state.projectId, { type: "user:left", userId: state.user.userId }, ws)
+        projectClients.get(state.projectId)?.delete(ws)
         state.projectId = null
       }
       return
@@ -264,6 +277,7 @@ wss.on("connection", (ws) => {
     if (closedState?.projectId && closedState.user) {
       await releaseAllUserLocks(closedState.projectId, closedState.user.userId)
       presence.delete(closedState.user.userId)
+      projectClients.get(closedState.projectId)?.delete(ws)
       broadcastToProject(closedState.projectId, {
         type: "user:left",
         userId: closedState.user.userId,
@@ -278,6 +292,29 @@ wss.on("connection", (ws) => {
 
   ws.on("error", (err) => {
     console.error("[ws] Client error:", err.message)
+  })
+})
+
+// ── Heartbeat ping/pong ──
+const HEARTBEAT_INTERVAL = 30_000
+const HEARTBEAT_TIMEOUT = 10_000
+const aliveClients = new WeakSet<WebSocket>()
+
+const heartbeatTimer = setInterval(() => {
+  for (const [ws] of clients) {
+    if (!aliveClients.has(ws)) {
+      ws.terminate()
+      continue
+    }
+    aliveClients.delete(ws)
+    ws.ping()
+  }
+}, HEARTBEAT_INTERVAL)
+
+wss.on("connection", (ws) => {
+  aliveClients.add(ws)
+  ws.on("pong", () => {
+    aliveClients.add(ws)
   })
 })
 

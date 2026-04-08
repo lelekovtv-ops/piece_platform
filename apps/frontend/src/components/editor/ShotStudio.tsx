@@ -31,6 +31,7 @@ import { useBoardStore } from "@/store/board"
 import { useScenesStore } from "@/store/scenes"
 import { ImageEditOverlay } from "@/components/ui/ImageEditOverlay"
 import { trySaveBlob } from "@/lib/fileStorage"
+import { createBlobUrlTracker } from "@/lib/blobUrlTracker"
 import { buildImagePrompt, getCharactersForShot, getPropsForShot, getLocationsForShot } from "@/lib/promptBuilder"
 import { SceneBibleBubble } from "@/components/editor/screenplay/StoryboardShared"
 import { useScriptStore } from "@/store/script"
@@ -180,6 +181,12 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showUI, setShowUI] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blobTrackerRef = useRef(createBlobUrlTracker())
+
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => blobTrackerRef.current.revokeAll()
+  }, [])
 
   // Stores
   const shot = useTimelineStore((s) => s.shots.find((x) => x.id === shotId)) ?? null
@@ -307,7 +314,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const pushGeneration = useCallback(async (blob: Blob) => {
     if (!shot) return
     undoStackRef.current = []
-    const url = URL.createObjectURL(blob)
+    const url = blobTrackerRef.current.track(URL.createObjectURL(blob))
     const blobKey = `shot-gen-${shotId}-${Date.now()}`
     const persisted = await trySaveBlob(blobKey, blob)
     const histEntry: GenerationHistoryEntry = {
@@ -337,7 +344,12 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       undoStackRef.current = [...undoStackRef.current, { url: currentEntry.url, blob: await fetch(currentEntry.url).then((r) => r.blob()).catch(() => blob) }]
     }
 
-    const url = URL.createObjectURL(blob)
+    // Revoke old URL when overwriting
+    if (currentEntry?.url) {
+      blobTrackerRef.current.revoke(currentEntry.url)
+    }
+
+    const url = blobTrackerRef.current.track(URL.createObjectURL(blob))
     const blobKey = `shot-${source}-${shotId}-${Date.now()}`
     const persisted = await trySaveBlob(blobKey, blob)
 
@@ -1041,7 +1053,8 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       )
 
       if (result.blob) {
-        const url = URL.createObjectURL(result.blob)
+        blobTrackerRef.current.revoke(shot?.originalUrl)
+        const url = blobTrackerRef.current.track(URL.createObjectURL(result.blob))
         const blobKey = `shot-video-${shotId}-${Date.now()}`
         const { trySaveBlob } = await import("@/lib/fileStorage")
         await trySaveBlob(blobKey, result.blob)

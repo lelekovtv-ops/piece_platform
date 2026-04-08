@@ -7,6 +7,9 @@ import { corsMiddleware } from '@piece/cors-middleware';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { initializePubSub } from '@piece/pubsub';
+import { createAuthMiddleware } from '@piece/auth-middleware';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { Redis } from 'ioredis';
 import { initializeExampleSubscriber } from './services/exampleSubscriber.js';
 import { initializeCollaboration } from './services/collaboration.js';
 
@@ -43,8 +46,16 @@ const io = new Server(httpServer, {
     origin: config.get('WS_CORS_ORIGINS'),
     credentials: true,
   },
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'],
 });
+
+// Redis adapter for horizontal scaling
+const redisUrl = config.get('REDIS_URL');
+const pubClient = new Redis(redisUrl);
+const subClient = pubClient.duplicate();
+io.adapter(createAdapter(pubClient, subClient));
+
+const { verifyToken } = createAuthMiddleware({ config });
 
 // ---------------------------------------------------------------------------
 // /events namespace — main event delivery channel
@@ -57,11 +68,12 @@ eventsNs.use((socket, next) => {
     return next(new Error('Authentication required'));
   }
 
-  // TODO: verify JWT and extract user context
-  // const user = verifyJwt(token);
-  // socket.data.user = user;
+  const user = verifyToken(token);
+  if (!user) {
+    return next(new Error('Invalid or expired token'));
+  }
 
-  // Placeholder: accept all connections for scaffolding
+  socket.data.user = user;
   socket.data.authenticated = true;
   next();
 });

@@ -13,10 +13,14 @@ export async function initializeMultiTenancy(mongoUri, options = {}) {
   }
 
   const {
-    maxPoolSize = 50,
-    minPoolSize = 5,
+    maxPoolSize = 200,
+    minPoolSize = 20,
     connectTimeoutMS = 10000,
     serverSelectionTimeoutMS = 10000,
+    waitQueueTimeoutMS = 30000,
+    socketTimeoutMS = 30000,
+    retryWrites = true,
+    retryReads = true,
   } = options;
 
   client = new MongoClient(mongoUri, {
@@ -24,6 +28,10 @@ export async function initializeMultiTenancy(mongoUri, options = {}) {
     minPoolSize,
     connectTimeoutMS,
     serverSelectionTimeoutMS,
+    waitQueueTimeoutMS,
+    socketTimeoutMS,
+    retryWrites,
+    retryReads,
   });
 
   await client.connect();

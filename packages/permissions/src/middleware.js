@@ -14,6 +14,7 @@ import {
   AccessLevelPriority,
   ResourceInheritance,
 } from './types.js';
+import { mongoIdUtils } from '@piece/validation/mongo';
 
 // ---------------------------------------------------------------------------
 // Module state — populated by initializePermissions()
@@ -196,8 +197,8 @@ export function requireTeamAccess() {
 
       const members = _systemDb.collection('team_members');
       const membership = await members.findOne({
-        teamId,
-        userId,
+        teamId: mongoIdUtils.toObjectId(teamId),
+        userId: mongoIdUtils.toObjectId(userId),
         status: { $in: ['active', 'invited'] },
       });
 

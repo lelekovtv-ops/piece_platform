@@ -8,7 +8,9 @@
     "./middleware": "./src/middleware.js",
     "./types": "./src/types.js"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@piece/validation": "*"
+  },
   "peerDependencies": {
     "mongodb": ">=6.0.0"
   },

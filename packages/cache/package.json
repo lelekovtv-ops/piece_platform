@@ -4,7 +4,9 @@
   "type": "module",
   "main": "src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./accountLockout": "./src/accountLockout.js",
+    "./resendLimiter": "./src/resendLimiter.js"
   },
   "dependencies": {
     "ioredis": "^5.4.0"

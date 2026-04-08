@@ -1,12 +1,17 @@
 "use client"
 
 import { StoryboardPanel } from "@/components/editor/screenplay/StoryboardPanel"
-import { BlockCanvas } from "@/components/editor/canvas/BlockCanvas"
+import dynamic from "next/dynamic"
 import { useBlockCanvasStore } from "@/store/blockCanvas"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect } from "react"
 import { useSyncOrchestrator } from "@/hooks/useSyncOrchestrator"
 import { Grid } from "lucide-react"
+
+const BlockCanvas = dynamic(
+  () => import("@/components/editor/canvas/BlockCanvas").then((mod) => ({ default: mod.BlockCanvas })),
+  { ssr: false },
+)
 
 export default function WorkspacePage() {
   const router = useRouter()
