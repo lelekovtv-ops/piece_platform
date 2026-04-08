@@ -6,7 +6,8 @@ import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useBibleStore } from "@/store/bible"
 import { useBoardStore } from "@/store/board"
-import { trySaveBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
+import { useProjectsStore } from "@/store/projects"
 import type { CharacterEntry, LocationEntry, PropEntry } from "@/lib/bibleParser"
 
 const BIBLE_STYLE_PRESETS = [
@@ -333,9 +334,10 @@ export function SceneBibleBubble({
       const prompt = `Cinematic portrait photograph. ${c.appearancePrompt || c.name}. ${style}. Portrait framing, head and shoulders. No text.`
       const blob = await generateBibleImageFromModal(prompt, selectedModel)
       const blobKey = `bible-char-${c.id}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const url = URL.createObjectURL(blob)
-      updateCharacter(c.id, { generatedPortraitUrl: url, portraitBlobKey: persisted ? blobKey : null, canonicalImageId: c.canonicalImageId ?? "__generated_primary__" })
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const url = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
+      updateCharacter(c.id, { generatedPortraitUrl: url, portraitBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), portraitS3Key: adaptive.s3Key, portraitPublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: c.canonicalImageId ?? "__generated_primary__" })
     } catch (err) { console.error("Bible char gen error:", err) }
     finally { setGeneratingId(null) }
   }
@@ -347,9 +349,10 @@ export function SceneBibleBubble({
       const prompt = `Cinematic wide shot of location: ${l.appearancePrompt || l.name}. ${l.intExt === "INT" ? "Interior" : "Exterior"}. ${style}. Wide environmental frame. No text. No people.`
       const blob = await generateBibleImageFromModal(prompt, selectedModel)
       const blobKey = `bible-location-${l.id}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const url = URL.createObjectURL(blob)
-      updateLocation(l.id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null, canonicalImageId: l.canonicalImageId ?? "__generated_primary__" })
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const url = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
+      updateLocation(l.id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: l.canonicalImageId ?? "__generated_primary__" })
     } catch (err) { console.error("Bible loc gen error:", err) }
     finally { setGeneratingId(null) }
   }
@@ -361,20 +364,22 @@ export function SceneBibleBubble({
       const prompt = `Cinematic film still of a real full-size prop: ${p.appearancePrompt || p.name}. ${style}. Photographed on set, real-world scale. Uniform dark background, no distracting elements. Cinematic lighting. NOT a miniature, NOT a toy. No text.`
       const blob = await generateBibleImageFromModal(prompt, selectedModel)
       const blobKey = `bible-prop-${p.id}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const url = URL.createObjectURL(blob)
-      updateProp(p.id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null, canonicalImageId: p.canonicalImageId ?? "__generated_primary__" })
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const url = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
+      updateProp(p.id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: p.canonicalImageId ?? "__generated_primary__" })
     } catch (err) { console.error("Bible prop gen error:", err) }
     finally { setGeneratingId(null) }
   }
 
   const handleUpload = async (id: string, type: "char" | "loc" | "prop", file: File) => {
     const blobKey = `bible-${type}-${id}-${Date.now()}`
-    const persisted = await trySaveBlob(blobKey, file)
-    const url = URL.createObjectURL(file)
-    if (type === "char") updateCharacter(id, { generatedPortraitUrl: url, portraitBlobKey: persisted ? blobKey : null, canonicalImageId: "__generated_primary__" })
-    else if (type === "loc") updateLocation(id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null, canonicalImageId: "__generated_primary__" })
-    else updateProp(id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null, canonicalImageId: "__generated_primary__" })
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
+    const adaptive = await saveBlobAdaptive(blobKey, file, projectId)
+    const url = adaptive.remote ? adaptive.url : URL.createObjectURL(file)
+    if (type === "char") updateCharacter(id, { generatedPortraitUrl: url, portraitBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), portraitS3Key: adaptive.s3Key, portraitPublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: "__generated_primary__" })
+    else if (type === "loc") updateLocation(id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: "__generated_primary__" })
+    else updateProp(id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined, canonicalImageId: "__generated_primary__" })
   }
 
   const handleRemoveFromScene = (id: string, type: "char" | "loc" | "prop") => {
@@ -411,11 +416,12 @@ export function SceneBibleBubble({
       const prompt = `${customPrompt}. Based on: ${baseDesc}. ${style}. ${refImages.length > 0 ? "Use the reference image as visual anchor for identity and style." : ""} No text.`
       const blob = await generateBibleImageFromModal(prompt, selectedModel, refImages)
       const blobKey = `bible-var-${type}-${id}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const url = URL.createObjectURL(blob)
-      if (type === "char") updateCharacter(id, { generatedPortraitUrl: url, portraitBlobKey: persisted ? blobKey : null })
-      else if (type === "loc") updateLocation(id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null })
-      else updateProp(id, { generatedImageUrl: url, imageBlobKey: persisted ? blobKey : null })
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const url = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
+      if (type === "char") updateCharacter(id, { generatedPortraitUrl: url, portraitBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), portraitS3Key: adaptive.s3Key, portraitPublicUrl: adaptive.remote ? adaptive.url : undefined })
+      else if (type === "loc") updateLocation(id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined })
+      else updateProp(id, { generatedImageUrl: url, imageBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), imageS3Key: adaptive.s3Key, imagePublicUrl: adaptive.remote ? adaptive.url : undefined })
     } catch (err) { console.error("Variation gen error:", err) }
     finally { setGeneratingId(null) }
   }

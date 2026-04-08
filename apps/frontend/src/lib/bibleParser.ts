@@ -5,6 +5,8 @@ export interface BibleReferenceImage {
   id: string
   url: string
   blobKey: string
+  s3Key?: string
+  publicUrl?: string
 }
 
 export type VoiceProvider = "elevenlabs" | "fish" | "bark" | "custom"
@@ -30,6 +32,8 @@ export interface CharacterEntry {
   canonicalImageId: string | null
   generatedPortraitUrl: string | null
   portraitBlobKey: string | null
+  portraitS3Key?: string
+  portraitPublicUrl?: string
   appearancePrompt: string
   sceneIds: string[]
   dialogueCount: number
@@ -47,6 +51,8 @@ export interface LocationEntry {
   canonicalImageId: string | null
   generatedImageUrl: string | null
   imageBlobKey: string | null
+  imageS3Key?: string
+  imagePublicUrl?: string
   appearancePrompt: string
   sceneIds: string[]
 }
@@ -60,6 +66,8 @@ export interface PropEntry {
   canonicalImageId: string | null
   generatedImageUrl: string | null
   imageBlobKey: string | null
+  imageS3Key?: string
+  imagePublicUrl?: string
   appearancePrompt: string
 }
 

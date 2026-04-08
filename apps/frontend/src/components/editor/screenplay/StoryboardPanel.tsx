@@ -16,7 +16,7 @@ import { timelineShotToStoryboardView, createShotFromStoryboardDefaults } from "
 import { useScriptStore } from "@/store/script"
 import { useScenesStore } from "@/store/scenes"
 import { useNavigationStore } from "@/store/navigation"
-import { trySaveBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import { applyColorTransfer, imageUrlToCanvas } from "@/lib/colorTransfer"
 import { convertReferenceImagesToDataUrls, getShotGenerationReferenceImages } from "@/lib/imageGenerationReferences"
 import { buildImagePrompt, buildVideoPrompt, getReferencedBibleEntries } from "@/lib/promptBuilder"
@@ -874,12 +874,14 @@ export function StoryboardPanel({
 
       // Read fresh shot from store (not stale closure)
       const freshShot = useTimelineStore.getState().shots.find((s) => s.id === shotId)
-      const entry = { url: result.objectUrl, blobKey: result.blobKey, timestamp: Date.now(), source: "generate" as const }
+      const entry = { url: result.objectUrl, blobKey: result.blobKey, s3Key: result.s3Key, publicUrl: result.publicUrl, timestamp: Date.now(), source: "generate" as const }
       const history = [...(freshShot?.generationHistory || []), entry]
 
       updateShot(shotId, {
         thumbnailUrl: result.objectUrl,
         thumbnailBlobKey: result.blobKey,
+        s3Key: result.s3Key,
+        publicUrl: result.publicUrl,
         generationHistory: history,
         activeHistoryIndex: history.length - 1,
       })
@@ -901,6 +903,8 @@ export function StoryboardPanel({
     updateShot(shotId, {
       thumbnailUrl: entry.url,
       thumbnailBlobKey: entry.blobKey,
+      s3Key: entry.s3Key ?? null,
+      publicUrl: entry.publicUrl ?? null,
       activeHistoryIndex: next,
     })
   }, [shots, updateShot])
@@ -1046,16 +1050,19 @@ export function StoryboardPanel({
 
       const blob = result.blob
       const blobKey = `shot-thumb-${shotId}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const objectUrl = URL.createObjectURL(blob)
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const objectUrl = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
 
       const freshShot = useTimelineStore.getState().shots.find((s) => s.id === shotId)
-      const editEntry = { url: objectUrl, blobKey: persisted ? blobKey : null, timestamp: Date.now(), source: "edit" as const }
+      const editEntry = { url: objectUrl, blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), s3Key: adaptive.s3Key, publicUrl: adaptive.remote ? adaptive.url : undefined, timestamp: Date.now(), source: "edit" as const }
       const editHistory = [...(freshShot?.generationHistory || []), editEntry]
 
       updateShot(shotId, {
         thumbnailUrl: objectUrl,
-        thumbnailBlobKey: persisted ? blobKey : null,
+        thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         generationHistory: editHistory,
         activeHistoryIndex: editHistory.length - 1,
       })
@@ -1092,16 +1099,19 @@ export function StoryboardPanel({
     setEditingIds((prev) => new Set(prev).add(shotId))
     try {
       const blobKey = `shot-thumb-${shotId}-${Date.now()}`
-      const persisted = await trySaveBlob(blobKey, blob)
-      const objectUrl = URL.createObjectURL(blob)
+      const projectId = useProjectsStore.getState().activeProjectId || undefined
+      const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+      const objectUrl = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
 
       const freshShot = useTimelineStore.getState().shots.find((s) => s.id === shotId)
-      const editEntry = { url: objectUrl, blobKey: persisted ? blobKey : null, timestamp: Date.now(), source: "edit" as const }
+      const editEntry = { url: objectUrl, blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null), s3Key: adaptive.s3Key, publicUrl: adaptive.remote ? adaptive.url : undefined, timestamp: Date.now(), source: "edit" as const }
       const editHistory = [...(freshShot?.generationHistory || []), editEntry]
 
       updateShot(shotId, {
         thumbnailUrl: objectUrl,
-        thumbnailBlobKey: persisted ? blobKey : null,
+        thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         generationHistory: editHistory,
         activeHistoryIndex: editHistory.length - 1,
       })

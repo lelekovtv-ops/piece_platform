@@ -29,8 +29,9 @@ import { type GenerationHistoryEntry, useTimelineStore } from "@/store/timeline"
 import { useBibleStore } from "@/store/bible"
 import { useBoardStore } from "@/store/board"
 import { useScenesStore } from "@/store/scenes"
+import { useProjectsStore } from "@/store/projects"
 import { ImageEditOverlay } from "@/components/ui/ImageEditOverlay"
-import { trySaveBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import { createBlobUrlTracker } from "@/lib/blobUrlTracker"
 import { buildImagePrompt, getCharactersForShot, getPropsForShot, getLocationsForShot } from "@/lib/promptBuilder"
 import { SceneBibleBubble } from "@/components/editor/screenplay/StoryboardShared"
@@ -314,19 +315,24 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const pushGeneration = useCallback(async (blob: Blob) => {
     if (!shot) return
     undoStackRef.current = []
-    const url = blobTrackerRef.current.track(URL.createObjectURL(blob))
     const blobKey = `shot-gen-${shotId}-${Date.now()}`
-    const persisted = await trySaveBlob(blobKey, blob)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
+    const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+    const url = adaptive.remote ? adaptive.url : blobTrackerRef.current.track(URL.createObjectURL(blob))
     const histEntry: GenerationHistoryEntry = {
       url,
-      blobKey: persisted ? blobKey : null,
+      blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
       timestamp: Date.now(),
       source: "generate",
     }
     const newHistory = [...(shot.generationHistory || []), histEntry]
     updateShot(shotId, {
       thumbnailUrl: url,
-      thumbnailBlobKey: persisted ? blobKey : null,
+      thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
       generationHistory: newHistory,
       activeHistoryIndex: newHistory.length - 1,
     })
@@ -349,9 +355,10 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       blobTrackerRef.current.revoke(currentEntry.url)
     }
 
-    const url = blobTrackerRef.current.track(URL.createObjectURL(blob))
     const blobKey = `shot-${source}-${shotId}-${Date.now()}`
-    const persisted = await trySaveBlob(blobKey, blob)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
+    const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+    const url = adaptive.remote ? adaptive.url : blobTrackerRef.current.track(URL.createObjectURL(blob))
 
     // Check if the current entry is already an edit — overwrite it
     // If it's a generation — create a new edit entry after it
@@ -360,13 +367,17 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       const updatedHistory = [...currentHistory]
       updatedHistory[currentIdx] = {
         url,
-        blobKey: persisted ? blobKey : null,
+        blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         timestamp: Date.now(),
         source,
       }
       updateShot(shotId, {
         thumbnailUrl: url,
-        thumbnailBlobKey: persisted ? blobKey : null,
+        thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         generationHistory: updatedHistory,
         activeHistoryIndex: currentIdx,
       })
@@ -377,13 +388,17 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       newHistory.splice(currentIdx + 1)
       newHistory.push({
         url,
-        blobKey: persisted ? blobKey : null,
+        blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         timestamp: Date.now(),
         source,
       })
       updateShot(shotId, {
         thumbnailUrl: url,
-        thumbnailBlobKey: persisted ? blobKey : null,
+        thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
         generationHistory: newHistory,
         activeHistoryIndex: newHistory.length - 1,
       })
@@ -402,18 +417,24 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
     const currentIdx = shot.activeHistoryIndex ?? currentHistory.length - 1
 
     const blobKey = `shot-undo-${shotId}-${Date.now()}`
-    const persisted = await trySaveBlob(blobKey, prev.blob)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
+    const adaptive = await saveBlobAdaptive(blobKey, prev.blob, projectId)
+    const url = adaptive.remote ? adaptive.url : prev.url
 
     const updatedHistory = [...currentHistory]
     updatedHistory[currentIdx] = {
-      url: prev.url,
-      blobKey: persisted ? blobKey : null,
+      url,
+      blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
       timestamp: Date.now(),
       source: "edit",
     }
     updateShot(shotId, {
-      thumbnailUrl: prev.url,
-      thumbnailBlobKey: persisted ? blobKey : null,
+      thumbnailUrl: url,
+      thumbnailBlobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
       generationHistory: updatedHistory,
       activeHistoryIndex: currentIdx,
     })
@@ -464,13 +485,13 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const goHistoryPrev = () => {
     if (historyIdx <= 0 || !shot) return
     const entry = history[historyIdx - 1]
-    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, activeHistoryIndex: historyIdx - 1 })
+    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? null, publicUrl: entry.publicUrl ?? null, activeHistoryIndex: historyIdx - 1 })
   }
 
   const goHistoryNext = () => {
     if (historyIdx >= history.length - 1 || !shot) return
     const entry = history[historyIdx + 1]
-    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, activeHistoryIndex: historyIdx + 1 })
+    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? null, publicUrl: entry.publicUrl ?? null, activeHistoryIndex: historyIdx + 1 })
   }
 
   // ── Playback ──
@@ -586,7 +607,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       if (e.key === "Enter" && deleteConfirm) {
         e.preventDefault()
         setDeleteConfirm(false)
-        updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, generationHistory: [], activeHistoryIndex: null })
+        updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: null, publicUrl: null, generationHistory: [], activeHistoryIndex: null })
       }
       if (e.key === "Enter" && !deleteConfirm && !promptEditing && !dualMode) {
         e.preventDefault()
@@ -1054,10 +1075,10 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
 
       if (result.blob) {
         blobTrackerRef.current.revoke(shot?.originalUrl)
-        const url = blobTrackerRef.current.track(URL.createObjectURL(result.blob))
         const blobKey = `shot-video-${shotId}-${Date.now()}`
-        const { trySaveBlob } = await import("@/lib/fileStorage")
-        await trySaveBlob(blobKey, result.blob)
+        const projectId = useProjectsStore.getState().activeProjectId || undefined
+        const adaptive = await saveBlobAdaptive(blobKey, result.blob, projectId)
+        const url = adaptive.remote ? adaptive.url : blobTrackerRef.current.track(URL.createObjectURL(result.blob))
         updateShot(shotId, { originalUrl: url })
         showToast("Видео сгенерировано!")
       }
@@ -1631,7 +1652,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
           history={history}
           historyIdx={historyIdx}
           sourceLabel={sourceLabel}
-          onSelect={(i) => updateShot(shotId, { thumbnailUrl: history[i].url, activeHistoryIndex: i })}
+          onSelect={(i) => updateShot(shotId, { thumbnailUrl: history[i].url, thumbnailBlobKey: history[i].blobKey, s3Key: history[i].s3Key ?? null, publicUrl: history[i].publicUrl ?? null, activeHistoryIndex: i })}
         />
       )}
 
@@ -1993,7 +2014,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
                 type="button"
                 onClick={() => {
                   setDeleteConfirm(false)
-                  updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, generationHistory: [], activeHistoryIndex: null })
+                  updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: null, publicUrl: null, generationHistory: [], activeHistoryIndex: null })
                 }}
                 className="rounded-lg bg-red-500/20 px-4 py-2 text-[12px] text-red-400 transition-colors hover:bg-red-500/30"
               >

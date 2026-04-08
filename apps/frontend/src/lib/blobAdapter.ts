@@ -54,10 +54,14 @@ export async function saveBlobAdaptive(
     }
   }
 
-  // Fallback: save to IndexedDB
-  await saveBlob(fileId, blob)
-  const url = await loadBlob(fileId)
-  return { url: url || "", remote: false }
+  // Fallback: save to IndexedDB (graceful — never throws)
+  try {
+    await saveBlob(fileId, blob)
+    const url = await loadBlob(fileId)
+    return { url: url || "", remote: false }
+  } catch {
+    return { url: "", remote: false }
+  }
 }
 
 function extensionFromMime(mime: string): string {

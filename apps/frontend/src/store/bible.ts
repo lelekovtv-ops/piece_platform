@@ -195,11 +195,13 @@ function getReferenceImages(entry?: LegacyReferenceFields | null): BibleReferenc
 
   if (Array.isArray(entry.referenceImages)) {
     return entry.referenceImages
-      .filter((image) => image && image.blobKey)
+      .filter((image) => image && (image.blobKey || image.s3Key))
       .map((image) => ({
         id: image.id,
         url: image.url,
         blobKey: image.blobKey,
+        s3Key: image.s3Key,
+        publicUrl: image.publicUrl,
       }))
   }
 
@@ -215,17 +217,24 @@ function getReferenceImages(entry?: LegacyReferenceFields | null): BibleReferenc
 }
 
 async function restoreReferenceImages(referenceImages: BibleReferenceImage[]): Promise<BibleReferenceImage[]> {
-  return Promise.all(referenceImages.map(async (image) => ({
-    ...image,
-    url: await loadBlob(image.blobKey).catch(() => image.url) ?? image.url,
-  })))
+  return Promise.all(referenceImages.map(async (image) => {
+    if (image.publicUrl) return { ...image, url: image.publicUrl }
+    return {
+      ...image,
+      url: await loadBlob(image.blobKey).catch(() => image.url) ?? image.url,
+    }
+  }))
 }
 
-async function restorePrimaryImage(blobKey: string | null, fallbackUrl: string | null): Promise<string | null> {
+async function restorePrimaryImage(
+  blobKey: string | null,
+  fallbackUrl: string | null,
+  publicUrl?: string,
+): Promise<string | null> {
+  if (publicUrl) return publicUrl
   if (!blobKey) {
     return fallbackUrl
   }
-
   return await loadBlob(blobKey).catch(() => fallbackUrl) ?? fallbackUrl
 }
 
@@ -506,17 +515,17 @@ export const useBibleStore = create<BibleState>()(
           Promise.all(state.characters.map(async (entry) => ({
             ...entry,
             referenceImages: await restoreReferenceImages(getReferenceImages(entry)),
-            generatedPortraitUrl: await restorePrimaryImage(entry.portraitBlobKey, entry.generatedPortraitUrl),
+            generatedPortraitUrl: await restorePrimaryImage(entry.portraitBlobKey, entry.generatedPortraitUrl, entry.portraitPublicUrl),
           }))),
           Promise.all(state.locations.map(async (entry) => ({
             ...entry,
             referenceImages: await restoreReferenceImages(getReferenceImages(entry)),
-            generatedImageUrl: await restorePrimaryImage(entry.imageBlobKey, entry.generatedImageUrl),
+            generatedImageUrl: await restorePrimaryImage(entry.imageBlobKey, entry.generatedImageUrl, entry.imagePublicUrl),
           }))),
           Promise.all((state.props ?? []).map(async (entry) => ({
             ...entry,
             referenceImages: await restoreReferenceImages(getReferenceImages(entry)),
-            generatedImageUrl: await restorePrimaryImage(entry.imageBlobKey, entry.generatedImageUrl),
+            generatedImageUrl: await restorePrimaryImage(entry.imageBlobKey, entry.generatedImageUrl, entry.imagePublicUrl),
           }))),
         ]).then(([characters, locations, props]) => {
           useBibleStore.setState({

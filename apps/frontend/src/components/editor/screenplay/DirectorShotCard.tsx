@@ -11,7 +11,7 @@ import { useBibleStore } from "@/store/bible"
 import { useBoardStore } from "@/store/board"
 import { useProjectsStore } from "@/store/projects"
 import { useLibraryStore } from "@/store/library"
-import { trySaveBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import { devlog } from "@/store/devlog"
 import {
   SHOT_SIZE_OPTIONS, CAMERA_MOTION_OPTIONS,
@@ -624,7 +624,7 @@ export function DirectorShotCard({
 
 export async function generateShotImage(
   shot: TimelineShot,
-): Promise<{ objectUrl: string; blobKey: string | null }> {
+): Promise<{ objectUrl: string; blobKey: string | null; s3Key?: string; publicUrl?: string }> {
   const { characters, locations, props: bibleProps } = useBibleStore.getState()
   const { selectedImageGenModel, projectStyle } = useBoardStore.getState()
   const selectedModel = selectedImageGenModel || "nano-banana-2"
@@ -685,15 +685,9 @@ export async function generateShotImage(
       throw new Error(`Image too small (${blob.size} bytes), likely an error response`)
     }
     const blobKey = `shot-thumb-${shot.id}-${Date.now()}`
-    let persisted = false
-    try {
-      persisted = await trySaveBlob(blobKey, blob)
-    } catch (e) {
-      console.warn("[KOZA] trySaveBlob failed, continuing without persistence:", e)
-    }
-
-    const projectId = useProjectsStore.getState().activeProjectId || "global"
-    const objectUrl = URL.createObjectURL(blob)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
+    const adaptive = await saveBlobAdaptive(blobKey, blob, projectId)
+    const objectUrl = adaptive.remote ? adaptive.url : URL.createObjectURL(blob)
 
     useLibraryStore.getState().addFile({
       id: blobKey,
@@ -702,23 +696,25 @@ export async function generateShotImage(
       mimeType: "image/png",
       size: blob.size,
       url: objectUrl,
-      thumbnailUrl: objectUrl,
+      thumbnailUrl: adaptive.thumbnailUrl || objectUrl,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       tags: ["generated", "storyboard"],
-      projectId,
+      projectId: projectId || "global",
       folder: "/storyboard",
       origin: "generated",
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
     })
 
     devlog.image("image_result", `Generated in ${Date.now() - start}ms`, "", {
       timing: Date.now() - start,
       blobSize: blob.size,
       model: selectedModel,
-      persisted,
+      persisted: adaptive.remote || !!adaptive.url,
     }, group)
 
-    if (!persisted) {
+    if (!adaptive.remote && !adaptive.url) {
       devlog.warn("Image cache unavailable", "The image was generated, but local blob persistence failed. The preview will work until reload.", {
         shotId: shot.id,
         model: selectedModel,
@@ -727,7 +723,12 @@ export async function generateShotImage(
 
     console.log(`[KOZA] Image generated in ${Date.now() - start}ms via ${selectedModel}`)
 
-    return { objectUrl, blobKey: persisted ? blobKey : null }
+    return {
+      objectUrl,
+      blobKey: adaptive.remote ? null : (adaptive.url ? blobKey : null),
+      s3Key: adaptive.s3Key,
+      publicUrl: adaptive.remote ? adaptive.url : undefined,
+    }
   } catch (error) {
     devlog.image("image_error", "Generation failed", String(error), {
       shotId: shot.id,

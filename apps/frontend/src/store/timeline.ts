@@ -9,6 +9,8 @@ export type HistoryEntrySource = "generate" | "edit" | "crop" | "color" | "loadi
 export interface GenerationHistoryEntry {
   url: string
   blobKey: string | null
+  s3Key?: string
+  publicUrl?: string
   timestamp: number
   source?: HistoryEntrySource
 }
@@ -22,6 +24,8 @@ export interface TimelineShot {
   originalUrl: string | null
   thumbnailBlobKey: string | null
   originalBlobKey: string | null
+  s3Key?: string
+  publicUrl?: string
   generationHistory: GenerationHistoryEntry[]
   activeHistoryIndex: number | null
   sceneId: string | null
@@ -543,7 +547,7 @@ export const useTimelineStore = create<TimelineState>()(
       partialize: (state) => ({
         shots: state.shots.map((s) => ({
           ...s,
-          generationHistory: s.generationHistory.filter((e) => e.blobKey),
+          generationHistory: s.generationHistory.filter((e) => e.blobKey || e.s3Key),
           activeHistoryIndex: s.activeHistoryIndex,
         })),
         audioClips: state.audioClips,
@@ -555,7 +559,7 @@ export const useTimelineStore = create<TimelineState>()(
             ...v,
             shots: v.shots.map((s) => ({
               ...s,
-              generationHistory: s.generationHistory.filter((e) => e.blobKey),
+              generationHistory: s.generationHistory.filter((e) => e.blobKey || e.s3Key),
               activeHistoryIndex: s.activeHistoryIndex,
             })),
           }])
@@ -563,7 +567,10 @@ export const useTimelineStore = create<TimelineState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return
-        const shotsWithBlobs = state.shots.filter((s) => s.thumbnailBlobKey || s.generationHistory.some((e) => e.blobKey))
+        const shotsWithBlobs = state.shots.filter((s) =>
+          s.thumbnailBlobKey || s.s3Key || s.publicUrl ||
+          s.generationHistory.some((e) => e.blobKey || e.s3Key)
+        )
         if (shotsWithBlobs.length === 0) return
 
         Promise.all(
@@ -571,16 +578,19 @@ export const useTimelineStore = create<TimelineState>()(
             try {
               const { loadBlob } = await import("@/lib/fileStorage")
 
-              // Restore thumbnail
+              // Restore thumbnail — prefer S3, fallback to IndexedDB
               let thumbUrl = shot.thumbnailUrl
-              if (shot.thumbnailBlobKey) {
+              if (shot.publicUrl) {
+                thumbUrl = shot.publicUrl
+              } else if (shot.thumbnailBlobKey) {
                 const url = await loadBlob(shot.thumbnailBlobKey)
                 if (url) thumbUrl = url
               }
 
-              // Restore generation history URLs
+              // Restore generation history URLs — prefer S3, fallback to IndexedDB
               const restoredHistory = await Promise.all(
                 shot.generationHistory.map(async (entry) => {
+                  if (entry.publicUrl) return { ...entry, url: entry.publicUrl }
                   if (!entry.blobKey) return entry
                   try {
                     const url = await loadBlob(entry.blobKey)

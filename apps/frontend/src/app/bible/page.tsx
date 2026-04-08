@@ -6,7 +6,8 @@ import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, Box, Check, ChevronDown, Copy, Download, FlipHorizontal2, FlipVertical2, Loader2, MapPin, Mic, Pencil, Play, Plus, RotateCcw, RotateCw, Sparkles, Square, Trash2, Upload, User, Volume2, Wand2, X } from "lucide-react"
 import { type BibleReferenceImage, type CharacterEntry, type LocationEntry, type PropEntry, type VoiceConfig, type VoiceProvider } from "@/lib/bibleParser"
-import { deleteBlob, saveBlob, trySaveBlob } from "@/lib/fileStorage"
+import { deleteBlob } from "@/lib/fileStorage"
+import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import {
   convertReferenceImagesToDataUrls,
   getCharacterGenerationReferenceImages,
@@ -22,6 +23,7 @@ import { useBoardStore } from "@/store/board"
 import { useScriptStore } from "@/store/script"
 import { GENERATED_CANONICAL_IMAGE_ID, useBibleStore, BUILT_IN_DIRECTORS, type DirectorProfile } from "@/store/bible"
 import { useNavigationStore } from "@/store/navigation"
+import { useProjectsStore } from "@/store/projects"
 
 /* ─── Director Profile Section ─── */
 
@@ -248,7 +250,12 @@ async function translateToEnglish(text: string): Promise<string> {
   }
 }
 
-async function replaceBlobImage(currentUrl: string | null, currentBlobKey: string | null, nextBlobKey: string, blob: Blob): Promise<string> {
+async function replaceBlobImage(
+  currentUrl: string | null,
+  currentBlobKey: string | null,
+  nextBlobKey: string,
+  blob: Blob,
+): Promise<{ url: string; s3Key?: string; publicUrl?: string }> {
   if (currentBlobKey) {
     await deleteBlob(currentBlobKey).catch(() => undefined)
   }
@@ -257,13 +264,14 @@ async function replaceBlobImage(currentUrl: string | null, currentBlobKey: strin
     URL.revokeObjectURL(currentUrl)
   }
 
-  const persisted = await trySaveBlob(nextBlobKey, blob)
+  const projectId = useProjectsStore.getState().activeProjectId || undefined
+  const adaptive = await saveBlobAdaptive(nextBlobKey, blob, projectId)
 
-  if (!persisted) {
-    console.warn("[KOZA] Bible image generated without IndexedDB persistence")
+  if (adaptive.remote) {
+    return { url: adaptive.url, s3Key: adaptive.s3Key, publicUrl: adaptive.url }
   }
 
-  return URL.createObjectURL(blob)
+  return { url: URL.createObjectURL(blob) }
 }
 
 function PlaceholderImage({ icon }: { icon: React.ReactNode }) {
@@ -1272,12 +1280,14 @@ export default function BiblePage() {
       const referenceImages = await convertReferenceImagesToDataUrls(userRefs)
       const resBlob = await generateBibleImage(prompt, model, referenceImages)
       const blobKey = `bible-char-${character.id}-${Date.now()}`
-      const url = await replaceBlobImage(character.generatedPortraitUrl, character.portraitBlobKey, blobKey, resBlob)
+      const result = await replaceBlobImage(character.generatedPortraitUrl, character.portraitBlobKey, blobKey, resBlob)
 
       updateCharacter(character.id, {
         canonicalImageId: character.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-        generatedPortraitUrl: url,
-        portraitBlobKey: blobKey,
+        generatedPortraitUrl: result.url,
+        portraitBlobKey: result.s3Key ? null : blobKey,
+        portraitS3Key: result.s3Key,
+        portraitPublicUrl: result.publicUrl,
       })
     } catch (err) {
       console.error("Portrait generation error:", err)
@@ -1299,12 +1309,14 @@ export default function BiblePage() {
       const referenceImages = await convertReferenceImagesToDataUrls(userRefs)
       const blob = await generateBibleImage(prompt, model, referenceImages)
       const blobKey = `bible-location-${location.id}-${Date.now()}`
-      const url = await replaceBlobImage(location.generatedImageUrl, location.imageBlobKey, blobKey, blob)
+      const result = await replaceBlobImage(location.generatedImageUrl, location.imageBlobKey, blobKey, blob)
 
       updateLocation(location.id, {
         canonicalImageId: location.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-        generatedImageUrl: url,
-        imageBlobKey: blobKey,
+        generatedImageUrl: result.url,
+        imageBlobKey: result.s3Key ? null : blobKey,
+        imageS3Key: result.s3Key,
+        imagePublicUrl: result.publicUrl,
       })
     } catch (err) {
       console.error("Location generation error:", err)
@@ -1315,34 +1327,41 @@ export default function BiblePage() {
 
   const handleCharacterPrimaryUpload = async (character: CharacterEntry, file: File) => {
     const blobKey = `bible-char-${character.id}-${Date.now()}`
-    const url = await replaceBlobImage(character.generatedPortraitUrl, character.portraitBlobKey, blobKey, file)
+    const result = await replaceBlobImage(character.generatedPortraitUrl, character.portraitBlobKey, blobKey, file)
     updateCharacter(character.id, {
       canonicalImageId: character.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-      generatedPortraitUrl: url,
-      portraitBlobKey: blobKey,
+      generatedPortraitUrl: result.url,
+      portraitBlobKey: result.s3Key ? null : blobKey,
+      portraitS3Key: result.s3Key,
+      portraitPublicUrl: result.publicUrl,
     })
   }
 
   const handleLocationPrimaryUpload = async (location: LocationEntry, file: File) => {
     const blobKey = `bible-location-${location.id}-${Date.now()}`
-    const url = await replaceBlobImage(location.generatedImageUrl, location.imageBlobKey, blobKey, file)
+    const result = await replaceBlobImage(location.generatedImageUrl, location.imageBlobKey, blobKey, file)
     updateLocation(location.id, {
       canonicalImageId: location.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-      generatedImageUrl: url,
-      imageBlobKey: blobKey,
+      generatedImageUrl: result.url,
+      imageBlobKey: result.s3Key ? null : blobKey,
+      imageS3Key: result.s3Key,
+      imagePublicUrl: result.publicUrl,
     })
   }
 
   const handleCharacterReferenceAdd = async (character: CharacterEntry, files: File[]) => {
     const remainingSlots = Math.max(0, 4 - character.referenceImages.length)
     const nextFiles = files.slice(0, remainingSlots)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
     const newReferences = await Promise.all(nextFiles.map(async (file, index) => {
       const blobKey = `bible-ref-${character.id}-${Date.now()}-${index}`
-      await saveBlob(blobKey, file)
+      const adaptive = await saveBlobAdaptive(blobKey, file, projectId)
       return {
         id: blobKey,
-        url: URL.createObjectURL(file),
-        blobKey,
+        url: adaptive.remote ? adaptive.url : URL.createObjectURL(file),
+        blobKey: adaptive.remote ? "" : blobKey,
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
       }
     }))
 
@@ -1356,13 +1375,16 @@ export default function BiblePage() {
   const handleLocationReferenceAdd = async (location: LocationEntry, files: File[]) => {
     const remainingSlots = Math.max(0, 4 - location.referenceImages.length)
     const nextFiles = files.slice(0, remainingSlots)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
     const newReferences = await Promise.all(nextFiles.map(async (file, index) => {
       const blobKey = `bible-ref-${location.id}-${Date.now()}-${index}`
-      await saveBlob(blobKey, file)
+      const adaptive = await saveBlobAdaptive(blobKey, file, projectId)
       return {
         id: blobKey,
-        url: URL.createObjectURL(file),
-        blobKey,
+        url: adaptive.remote ? adaptive.url : URL.createObjectURL(file),
+        blobKey: adaptive.remote ? "" : blobKey,
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
       }
     }))
 
@@ -1409,12 +1431,14 @@ export default function BiblePage() {
       const referenceImages = await convertReferenceImagesToDataUrls(userRefs)
       const blob = await generateBibleImage(prompt, selectedImageGenModel || "nano-banana-2", referenceImages)
       const blobKey = `bible-prop-${prop.id}-${Date.now()}`
-      const url = await replaceBlobImage(prop.generatedImageUrl, prop.imageBlobKey, blobKey, blob)
+      const result = await replaceBlobImage(prop.generatedImageUrl, prop.imageBlobKey, blobKey, blob)
 
       updateProp(prop.id, {
         canonicalImageId: prop.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-        generatedImageUrl: url,
-        imageBlobKey: blobKey,
+        generatedImageUrl: result.url,
+        imageBlobKey: result.s3Key ? null : blobKey,
+        imageS3Key: result.s3Key,
+        imagePublicUrl: result.publicUrl,
       })
     } catch (err) {
       console.error("Prop generation error:", err)
@@ -1425,24 +1449,29 @@ export default function BiblePage() {
 
   const handlePropPrimaryUpload = async (prop: PropEntry, file: File) => {
     const blobKey = `bible-prop-${prop.id}-${Date.now()}`
-    const url = await replaceBlobImage(prop.generatedImageUrl, prop.imageBlobKey, blobKey, file)
+    const result = await replaceBlobImage(prop.generatedImageUrl, prop.imageBlobKey, blobKey, file)
     updateProp(prop.id, {
       canonicalImageId: prop.canonicalImageId ?? GENERATED_CANONICAL_IMAGE_ID,
-      generatedImageUrl: url,
-      imageBlobKey: blobKey,
+      generatedImageUrl: result.url,
+      imageBlobKey: result.s3Key ? null : blobKey,
+      imageS3Key: result.s3Key,
+      imagePublicUrl: result.publicUrl,
     })
   }
 
   const handlePropReferenceAdd = async (prop: PropEntry, files: File[]) => {
     const remainingSlots = Math.max(0, 4 - prop.referenceImages.length)
     const nextFiles = files.slice(0, remainingSlots)
+    const projectId = useProjectsStore.getState().activeProjectId || undefined
     const newReferences = await Promise.all(nextFiles.map(async (file, index) => {
       const blobKey = `bible-ref-prop-${prop.id}-${Date.now()}-${index}`
-      await saveBlob(blobKey, file)
+      const adaptive = await saveBlobAdaptive(blobKey, file, projectId)
       return {
         id: blobKey,
-        url: URL.createObjectURL(file),
-        blobKey,
+        url: adaptive.remote ? adaptive.url : URL.createObjectURL(file),
+        blobKey: adaptive.remote ? "" : blobKey,
+        s3Key: adaptive.s3Key,
+        publicUrl: adaptive.remote ? adaptive.url : undefined,
       }
     }))
 
@@ -1575,13 +1604,13 @@ export default function BiblePage() {
     setEditingId(id)
     try {
       const blobKey = `bible-edit-${id}-${Date.now()}`
-      const url = await replaceBlobImage(src, null, blobKey, blob)
+      const result = await replaceBlobImage(src, null, blobKey, blob)
 
-      if (type === "char") updateCharacter(id, { generatedPortraitUrl: url, portraitBlobKey: blobKey })
-      else if (type === "loc") updateLocation(id, { generatedImageUrl: url, imageBlobKey: blobKey })
-      else updateProp(id, { generatedImageUrl: url, imageBlobKey: blobKey })
+      if (type === "char") updateCharacter(id, { generatedPortraitUrl: result.url, portraitBlobKey: result.s3Key ? null : blobKey, portraitS3Key: result.s3Key, portraitPublicUrl: result.publicUrl })
+      else if (type === "loc") updateLocation(id, { generatedImageUrl: result.url, imageBlobKey: result.s3Key ? null : blobKey, imageS3Key: result.s3Key, imagePublicUrl: result.publicUrl })
+      else updateProp(id, { generatedImageUrl: result.url, imageBlobKey: result.s3Key ? null : blobKey, imageS3Key: result.s3Key, imagePublicUrl: result.publicUrl })
 
-      if (lightbox?.id === id) setLightbox({ ...lightbox, src: url })
+      if (lightbox?.id === id) setLightbox({ ...lightbox, src: result.url })
     } catch (err) { console.error("Smart edit error:", err) }
     finally { setEditingId(null) }
   }
@@ -1611,13 +1640,13 @@ export default function BiblePage() {
 
     const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"))
     const blobKey = `bible-transform-${lightbox.id}-${Date.now()}`
-    const url = await replaceBlobImage(lightbox.src, null, blobKey, blob)
+    const result = await replaceBlobImage(lightbox.src, null, blobKey, blob)
 
-    if (lightbox.type === "char") updateCharacter(lightbox.id, { generatedPortraitUrl: url, portraitBlobKey: blobKey })
-    else if (lightbox.type === "loc") updateLocation(lightbox.id, { generatedImageUrl: url, imageBlobKey: blobKey })
-    else updateProp(lightbox.id, { generatedImageUrl: url, imageBlobKey: blobKey })
+    if (lightbox.type === "char") updateCharacter(lightbox.id, { generatedPortraitUrl: result.url, portraitBlobKey: result.s3Key ? null : blobKey, portraitS3Key: result.s3Key, portraitPublicUrl: result.publicUrl })
+    else if (lightbox.type === "loc") updateLocation(lightbox.id, { generatedImageUrl: result.url, imageBlobKey: result.s3Key ? null : blobKey, imageS3Key: result.s3Key, imagePublicUrl: result.publicUrl })
+    else updateProp(lightbox.id, { generatedImageUrl: result.url, imageBlobKey: result.s3Key ? null : blobKey, imageS3Key: result.s3Key, imagePublicUrl: result.publicUrl })
 
-    setLightbox({ ...lightbox, src: url })
+    setLightbox({ ...lightbox, src: result.url })
     setLbTransform({ flipH: false, flipV: false, rotate: 0 })
   }
 
