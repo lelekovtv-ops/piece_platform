@@ -1,0 +1,17 @@
+{
+  "name": "@piece/pubsub",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./streams": "./src/streams.js",
+    "./subjects": "./src/subjects.js"
+  },
+  "dependencies": {
+    "nats": "^2.28.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

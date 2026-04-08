@@ -1,0 +1,21 @@
+{
+  "name": "@piece/websocket-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "vitest run",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@piece/config": "*",
+    "@piece/logger": "*",
+    "@piece/cors-middleware": "*",
+    "@piece/pubsub": "*",
+    "express": "^4.21.0",
+    "helmet": "^8.0.0",
+    "socket.io": "^4.8.0"
+  }
+}

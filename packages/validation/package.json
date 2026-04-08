@@ -1,0 +1,22 @@
+{
+  "name": "@piece/validation",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./mongo": "./src/mongo.js",
+    "./events": "./src/events/index.js",
+    "./email": "./src/emailValidation.js",
+    "./email-normalize": "./src/emailNormalization.js",
+    "./turnstile": "./src/turnstile.js"
+  },
+  "dependencies": {
+    "disposable-email-domains": "^1.0.62",
+    "mongodb": "^6.0.0",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

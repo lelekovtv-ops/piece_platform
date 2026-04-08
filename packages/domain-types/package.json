@@ -1,0 +1,28 @@
+{
+  "name": "@piece/domain-types",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./screenplay": "./src/screenplay.js",
+    "./rundown": "./src/rundown.js",
+    "./production": "./src/production.js",
+    "./bible": "./src/bible.js",
+    "./canvas": "./src/canvas.js",
+    "./collaboration": "./src/collaboration.js",
+    "./generation": "./src/generation.js",
+    "./cinematic": "./src/cinematic.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "devDependencies": {
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

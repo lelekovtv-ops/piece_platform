@@ -1,0 +1,23 @@
+{
+  "name": "@piece/test-utils",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./mocks/multitenancy": "./src/mocks/multitenancy.js",
+    "./mocks/pubsub": "./src/mocks/pubsub.js",
+    "./mocks/config": "./src/mocks/config.js",
+    "./mocks/logger": "./src/mocks/logger.js",
+    "./mocks/redis": "./src/mocks/redis.js",
+    "./helpers/express": "./src/helpers/express.js",
+    "./helpers/mongodb": "./src/helpers/mongodb.js",
+    "./fixtures/users": "./src/fixtures/users.js",
+    "./fixtures/teams": "./src/fixtures/teams.js"
+  },
+  "peerDependencies": {
+    "vitest": ">=3.0.0",
+    "express": ">=4.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
