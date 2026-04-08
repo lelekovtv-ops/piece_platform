@@ -416,7 +416,7 @@ export const useBibleStore = create<BibleState>()(
         })
       },
       removeUnusedEntries: () => {
-        let removed = { chars: 0, locs: 0, props: 0 }
+        const removed = { chars: 0, locs: 0, props: 0 }
         useBibleStore.setState((state) => {
           const characters = state.characters.filter((c) => {
             if (c.sceneIds.length === 0 && c.dialogueCount === 0) { removed.chars++; return false }

@@ -264,7 +264,7 @@ function calculateSmartDurations(jenkinsShots: JenkinsShot[], sceneText: string,
   const shotDialogues: SceneDialogueBlock[][] = jenkinsShots.map(() => [])
 
   // Try to match dialogues to shots by character mention in shot notes/caption
-  let unmatched: SceneDialogueBlock[] = []
+  const unmatched: SceneDialogueBlock[] = []
 
   for (const dlg of dialogues) {
     let assigned = false

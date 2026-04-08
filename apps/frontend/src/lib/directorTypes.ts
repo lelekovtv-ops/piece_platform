@@ -125,7 +125,7 @@ export function attachBlocksToAction(
   const dialogue: ShotDialogue[] = []
   let vo = ""
   const sfx: string[] = []
-  let notes = ""
+  const notes = ""
 
   // Find blocks between this action and the next action/scene_heading
   const startIdx = blocks.findIndex((b) => b.id === actionBlockId)

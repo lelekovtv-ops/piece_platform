@@ -29,7 +29,9 @@ const PINKY_PIP = 18
 const THUMB_TIP = 4
 const THUMB_IP = 3
 
-function isFingerExtended(landmarks: any[], tip: number, pip: number): boolean {
+interface Landmark { x: number; y: number; z: number }
+
+function isFingerExtended(landmarks: Landmark[], tip: number, pip: number): boolean {
   return landmarks[tip].y < landmarks[pip].y
 }
 
@@ -37,7 +39,7 @@ function distance(a: { x: number; y: number }, b: { x: number; y: number }): num
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-function detectGesture(landmarks: any[]): HandGesture {
+function detectGesture(landmarks: Landmark[]): HandGesture {
   const indexUp = isFingerExtended(landmarks, INDEX_TIP, INDEX_PIP)
   const middleUp = isFingerExtended(landmarks, MIDDLE_TIP, MIDDLE_PIP)
   const ringUp = isFingerExtended(landmarks, RING_TIP, RING_PIP)
@@ -69,7 +71,7 @@ export function useHandTracking(enabled: boolean) {
   const [cameraReady, setCameraReady] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const handLandmarkerRef = useRef<any>(null)
+  const handLandmarkerRef = useRef<{ detect: (video: HTMLVideoElement) => { landmarks: Landmark[][] } } | null>(null)
   const rafRef = useRef<number>(0)
   const streamRef = useRef<MediaStream | null>(null)
 

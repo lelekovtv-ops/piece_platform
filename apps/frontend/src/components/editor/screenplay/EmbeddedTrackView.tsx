@@ -452,8 +452,8 @@ export function EmbeddedTrackView({
     }
     // scriptBlocks visual field (fallback)
     for (const b of scriptBlocks) {
-      if ((b as any).visual?.thumbnailUrl && !map.has(b.id)) {
-        map.set(b.id, (b as any).visual.thumbnailUrl)
+      if ((b as unknown as { visual?: { thumbnailUrl?: string } }).visual?.thumbnailUrl && !map.has(b.id)) {
+        map.set(b.id, (b as unknown as { visual: { thumbnailUrl: string } }).visual.thumbnailUrl)
       }
     }
     return map

@@ -253,11 +253,11 @@ export function SessionDrawer({ open, onClose, gestureMode: gestureModeExternal,
   // Expose handler for parent
   useEffect(() => {
     if (open) {
-      (window as any).__sessionCommand = handleSessionCommand
+      (window as unknown as Record<string, unknown>).__sessionCommand = handleSessionCommand
     } else {
-      delete (window as any).__sessionCommand
+      delete (window as unknown as Record<string, unknown>).__sessionCommand
     }
-    return () => { delete (window as any).__sessionCommand }
+    return () => { delete (window as unknown as Record<string, unknown>).__sessionCommand }
   }, [open, handleSessionCommand])
 
   const handleOpen = (id: string) => {

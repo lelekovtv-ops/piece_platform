@@ -1518,8 +1518,8 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
                         {/* Prompt checker */}
                         <button
                           type="button"
-                          onClick={() => {
-                            const { censorPrompt } = require("@/lib/cinematic/promptCensor") as typeof import("@/lib/cinematic/promptCensor")
+                          onClick={async () => {
+                            const { censorPrompt } = await import("@/lib/cinematic/promptCensor")
                             const fullPrompt = standalone
                               ? (promptDraft || shot.imagePrompt || "")
                               : buildImagePrompt({ ...shot, imagePrompt: promptDraft || shot.imagePrompt || "" }, characters, locations, projectStyle, bibleProps)

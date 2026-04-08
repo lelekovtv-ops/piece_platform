@@ -22,7 +22,7 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
   const [listening, setListening] = useState(false)
   const [interimText, setInterimText] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
-  const recognitionRef = useRef<any>(null)
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
   const submitAfterSpeechRef = useRef(false)
 
   const panels = usePanelsStore((s) => s.panels)
@@ -63,7 +63,7 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
 
   // ── Voice recognition (Web Speech API) ──
   const startListening = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition
     if (!SpeechRecognition) {
       setLastAction("Speech not supported in this browser")
       return
@@ -85,7 +85,7 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
       setInterimText("")
     }
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = ""
       let final = ""
       for (let i = 0; i < event.results.length; i++) {
@@ -112,7 +112,7 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
       recognitionRef.current = null
     }
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error !== "no-speech" && event.error !== "aborted") {
         setLastAction(`Mic: ${event.error}`)
       }

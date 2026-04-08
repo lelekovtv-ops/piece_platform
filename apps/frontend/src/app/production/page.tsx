@@ -277,7 +277,7 @@ function SceneCallSheet({
 function SharePanel({ role }: { role: Role }) {
   const [copied, setCopied] = useState(false)
   const roleConfig = ROLES.find((r) => r.id === role)
-  const mockLink = `koza.app/share/${role}-${Date.now().toString(36)}`
+  const mockLink = useMemo(() => `koza.app/share/${role}-${Date.now().toString(36)}`, [role])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(mockLink)
@@ -304,7 +304,7 @@ function SharePanel({ role }: { role: Role }) {
           {copied ? "Скопировано" : "Копировать"}
         </button>
       </div>
-      <p className="mt-2 text-[10px] text-white/25">Получатель увидит только задачи для роли "{roleConfig?.label}". Только чтение + комментарии.</p>
+      <p className="mt-2 text-[10px] text-white/25">Получатель увидит только задачи для роли &quot;{roleConfig?.label}&quot;. Только чтение + комментарии.</p>
     </div>
   )
 }
