@@ -2,8 +2,15 @@
 
 import type { ReactNode } from "react"
 import { useEffect } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { useCollaboration } from "@/hooks/useCollaboration"
 import { useAuthStore } from "@/lib/auth/auth-store"
+
+const PUBLIC_ROUTES = ["/login", "/healthz"]
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))
+}
 
 function CollaborationBridge() {
   useCollaboration()
@@ -13,10 +20,25 @@ function CollaborationBridge() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const initialize = useAuthStore((s) => s.initialize)
   const isLoading = useAuthStore((s) => s.isLoading)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const pathname = usePathname()
+  const router = useRouter()
 
   useEffect(() => {
     initialize()
   }, [initialize])
+
+  useEffect(() => {
+    if (isLoading) return
+
+    if (!isAuthenticated && !isPublicRoute(pathname)) {
+      router.replace("/login")
+    }
+
+    if (isAuthenticated && pathname === "/login") {
+      router.replace("/")
+    }
+  }, [isLoading, isAuthenticated, pathname, router])
 
   if (isLoading) {
     return (
@@ -24,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         <div className="text-sm text-white/30">Loading...</div>
       </div>
     )
+  }
+
+  if (!isAuthenticated && !isPublicRoute(pathname)) {
+    return null
   }
 
   return (
