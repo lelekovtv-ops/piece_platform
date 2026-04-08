@@ -1,0 +1,22 @@
+{
+  "name": "piece",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "scripts": {
+    "dev": "concurrently \"pnpm run dev:backend\" \"pnpm run dev:frontend\"",
+    "dev:backend": "./dev.sh",
+    "dev:frontend": "pnpm exec nx run @piece/frontend:dev",
+    "build": "pnpm exec nx run-many -t build",
+    "test": "pnpm exec nx run-many -t test",
+    "lint": "pnpm exec nx run-many -t lint",
+    "infra": "docker compose up -d mongodb redis nats minio qdrant",
+    "infra:stop": "docker compose down"
+  },
+  "devDependencies": {
+    "nx": "^21.0.0",
+    "concurrently": "^8.0.0",
+    "vitest": "^3.0.0",
+    "eslint": "^8.57.0"
+  }
+}

@@ -1,0 +1,244 @@
+# piece — Docker Compose Template
+# Replace placeholders: piece, piece, api.localhost, app.localhost
+# Port placeholders: 27022, 6384, 9006, 9007, 4223, 8223
+# See CLAUDE.md → Port Allocation for the global registry of assigned ports.
+
+x-common-env: &common-env
+  NODE_ENV: ${NODE_ENV:-production}
+  MONGODB_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-changeme}@mongodb:27017
+  MONGODB_SYSTEM_DB: ${MONGODB_SYSTEM_DB:-system}
+  REDIS_URL: redis://redis:6379
+  NATS_URL: nats://nats:4222
+  API_GATEWAY_URL: http://api-gateway:3100
+  JWT_PUBLIC_KEY_BASE64: ${JWT_PUBLIC_KEY_BASE64}
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  QDRANT_URL: http://qdrant:6333
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  FROM_EMAIL: ${FROM_EMAIL:-noreply@localhost}
+  FROM_NAME: ${FROM_NAME:-piece}
+  SES_REGION: ${SES_REGION:-eu-central-1}
+  SES_ACCESS_KEY_ID: ${SES_ACCESS_KEY_ID:-}
+  SES_SECRET_ACCESS_KEY: ${SES_SECRET_ACCESS_KEY:-}
+  SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}
+
+x-common-healthcheck: &common-healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 15s
+
+x-infra-depends: &infra-depends
+  mongodb:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  nats:
+    condition: service_healthy
+
+services:
+  # ============================================================
+  # Infrastructure
+  # ============================================================
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
+    ports:
+      - "${MONGO_PORT:-27022}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      <<: *common-healthcheck
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --maxmemory 1gb --maxmemory-policy allkeys-lru --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6384}:6379"
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      <<: *common-healthcheck
+
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: >
+      -js
+      -sd /data
+      -m 8222
+    ports:
+      - "${NATS_PORT:-4223}:4222"
+      - "${NATS_MONITOR_PORT:-8223}:8222"
+    volumes:
+      - nats_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8222/healthz"]
+      <<: *common-healthcheck
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_PORT:-9006}:9000"
+      - "${MINIO_CONSOLE_PORT:-9007}:9001"
+    volumes:
+      - minio_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      <<: *common-healthcheck
+
+  qdrant:
+    image: qdrant/qdrant:v1.14.0
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6337}:6333"
+      - "${QDRANT_GRPC_PORT:-6338}:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:6333/healthz"]
+      <<: *common-healthcheck
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+      mc mb --ignore-existing local/koza-uploads &&
+      mc mb --ignore-existing local/koza-temp &&
+      mc mb --ignore-existing local/koza-exports &&
+      echo 'Buckets created successfully'
+      "
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+
+  # ============================================================
+  # API Gateway
+  # ============================================================
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      PORT: 3100
+      # Add service URLs here as you add services:
+      # USERS_SERVICE_URL: http://users-management:3101
+      # TEAMS_SERVICE_URL: http://teams-management:3102
+    ports:
+      - "3100:3100"
+    depends_on:
+      <<: *infra-depends
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3100/health"]
+      <<: *common-healthcheck
+
+  # ============================================================
+  # Backend Services — Add your services below
+  # ============================================================
+  #
+  # Template for a new service:
+  #
+  # my-service:
+  #   build:
+  #     context: .
+  #     dockerfile: docker/Dockerfile.service
+  #     args:
+  #       SERVICE_NAME: my-service
+  #       PORT: 3101
+  #   restart: unless-stopped
+  #   environment:
+  #     <<: *common-env
+  #     PORT: 3101
+  #   depends_on:
+  #     <<: *infra-depends
+  #   healthcheck:
+  #     test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3101/health"]
+  #     <<: *common-healthcheck
+
+  # ============================================================
+  # Frontend
+  # ============================================================
+
+  platform:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.platform
+      args:
+        VITE_API_URL: https://api.localhost
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/health"]
+      <<: *common-healthcheck
+
+  # ============================================================
+  # Reverse Proxy
+  # ============================================================
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api-gateway
+      - platform
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+volumes:
+  mongodb_data:
+  redis_data:
+  nats_data:
+  minio_data:
+  qdrant_data:

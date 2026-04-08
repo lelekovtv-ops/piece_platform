@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+ENV NODE_ENV=production
+
+RUN corepack enable && corepack prepare pnpm@10.30.3 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/ ./packages/
+COPY apps/backend/ ./apps/backend/
+COPY apps/frontend/ ./apps/frontend/
+COPY tools/ ./tools/
+
+RUN pnpm install --frozen-lockfile --prod
+
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
