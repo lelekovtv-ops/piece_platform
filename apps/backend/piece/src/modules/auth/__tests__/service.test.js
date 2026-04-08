@@ -283,4 +283,61 @@ describe('AuthService', () => {
       expect(user.passwordHash).toBeUndefined();
     });
   });
+
+  describe('changePassword', () => {
+    it('should change password when current password is correct', async () => {
+      mockCollection.findOne.mockResolvedValueOnce({
+        _id: 'user-id',
+        email: 'test@example.com',
+        passwordHash: '$2b$12$oldhash',
+      });
+      mockCollection.updateOne = vi.fn().mockResolvedValueOnce({ modifiedCount: 1 });
+
+      await authService.changePassword('user-id', 'currentpassword', 'newpassword123');
+
+      expect(mockCollection.updateOne).toHaveBeenCalledWith(
+        { _id: 'user-id' },
+        expect.objectContaining({
+          $set: expect.objectContaining({
+            passwordHash: '$2b$12$hashedpassword',
+          }),
+        }),
+      );
+    });
+
+    it('should throw WRONG_PASSWORD when current password is wrong', async () => {
+      const bcrypt = (await import('bcrypt')).default;
+      bcrypt.compare.mockResolvedValueOnce(false);
+
+      mockCollection.findOne.mockResolvedValueOnce({
+        _id: 'user-id',
+        email: 'test@example.com',
+        passwordHash: '$2b$12$oldhash',
+      });
+
+      await expect(
+        authService.changePassword('user-id', 'wrongpassword', 'newpassword123'),
+      ).rejects.toThrow('Current password is incorrect');
+    });
+
+    it('should throw USER_NOT_FOUND when user does not exist', async () => {
+      mockCollection.findOne.mockResolvedValueOnce(null);
+
+      await expect(
+        authService.changePassword('nonexistent', 'old', 'newpassword123'),
+      ).rejects.toThrow('User not found');
+    });
+
+    it('should throw WEAK_PASSWORD for short new password', async () => {
+      mockCollection.findOne.mockResolvedValueOnce({
+        _id: 'user-id',
+        email: 'test@example.com',
+        passwordHash: '$2b$12$oldhash',
+      });
+
+      await expect(
+        authService.changePassword('user-id', 'currentpassword', 'short'),
+      ).rejects.toThrow('Password must be at least 8 characters');
+    });
+  });
 });

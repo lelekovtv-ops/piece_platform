@@ -229,6 +229,38 @@ async function getProfile(userId) {
   return sanitizeUser(user);
 }
 
+async function changePassword(userId, currentPassword, newPassword) {
+  const users = getUsersCollection();
+  const user = await users.findOne({ _id: mongoIdUtils.toObjectId(userId) });
+
+  if (!user) {
+    const error = new Error('User not found');
+    error.code = 'USER_NOT_FOUND';
+    throw error;
+  }
+
+  if (newPassword.length < PASSWORD_MIN_LENGTH) {
+    const error = new Error(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    error.code = 'WEAK_PASSWORD';
+    throw error;
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    const error = new Error('Current password is incorrect');
+    error.code = 'WRONG_PASSWORD';
+    throw error;
+  }
+
+  const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await users.updateOne(
+    { _id: mongoIdUtils.toObjectId(userId) },
+    { $set: { passwordHash: newHash, updatedAt: new Date() } },
+  );
+
+  componentLogger.info('Password changed', { userId });
+}
+
 export const authService = {
   register,
   login,
@@ -236,4 +268,5 @@ export const authService = {
   refreshAccessToken,
   logout,
   getProfile,
+  changePassword,
 };

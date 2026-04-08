@@ -230,6 +230,39 @@ async function verifyMagicToken(req, res) {
   }
 }
 
+async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const details = [];
+    if (!currentPassword) details.push('Field "currentPassword" is required');
+    if (!newPassword) details.push('Field "newPassword" is required');
+    if (newPassword && newPassword.length < PASSWORD_MIN_LENGTH) {
+      details.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    }
+
+    if (details.length > 0) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Invalid input data', details });
+    }
+
+    await authService.changePassword(req.user.id, currentPassword, newPassword);
+    componentLogger.info('Password changed', { userId: req.user.id });
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    if (error.code === 'WRONG_PASSWORD') {
+      return res.status(400).json({ error: 'WRONG_PASSWORD', message: error.message });
+    }
+    if (error.code === 'USER_NOT_FOUND') {
+      return res.status(404).json({ error: 'NOT_FOUND', message: error.message });
+    }
+    if (error.code === 'WEAK_PASSWORD') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: error.message });
+    }
+    componentLogger.error('Password change failed', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Password change failed' });
+  }
+}
+
 export const authController = {
   register,
   login,
@@ -238,4 +271,5 @@ export const authController = {
   refresh,
   logout,
   me,
+  changePassword,
 };

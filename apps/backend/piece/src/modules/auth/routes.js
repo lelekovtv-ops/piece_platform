@@ -16,6 +16,7 @@ export function registerAuthRoutes(app, { authenticateToken } = {}) {
   if (authenticateToken) {
     router.post('/v1/auth/logout', authenticateToken, authController.logout);
     router.get('/v1/auth/me', authenticateToken, authController.me);
+    router.post('/v1/auth/change-password', authenticateToken, authController.changePassword);
   }
   app.use(router);
 }

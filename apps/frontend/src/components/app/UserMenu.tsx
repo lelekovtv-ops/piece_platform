@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { LogOut, User } from "lucide-react"
+import { LogOut, User, Settings } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useAuthStore } from "@/lib/auth/auth-store"
 
@@ -55,6 +55,16 @@ export function UserMenu() {
             <p className="text-[11px] text-white/30">{user.email}</p>
           </div>
           <div className="my-1 h-px bg-white/8" />
+          <button
+            onClick={() => {
+              setOpen(false)
+              router.push("/settings")
+            }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
+          >
+            <Settings size={13} />
+            Settings
+          </button>
           <button
             onClick={async () => {
               await logout()
