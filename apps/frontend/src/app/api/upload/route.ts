@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/authOptions"
 import { getPresignedUploadUrl, getPublicUrl } from "@/lib/s3Client"
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    // Auth check: verify Bearer token exists (temporary — this route moves to backend in Phase 5)
+    const authHeader = req.headers.get("authorization")
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -16,8 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "projectId and filename required" }, { status: 400 })
     }
 
-    const userId = (session.user as { id?: string }).id || "unknown"
-    const key = `${userId}/${projectId}/${filename}`
+    const key = `uploads/${projectId}/${filename}`
 
     const uploadUrl = await getPresignedUploadUrl(key, contentType || "image/webp")
     const publicUrl = getPublicUrl(key)

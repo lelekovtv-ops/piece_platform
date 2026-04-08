@@ -1,24 +1,25 @@
 /**
- * useCollaboration — connects WS client to NextAuth session and project.
+ * useCollaboration — connects WS client to auth store and project.
  * Mount at layout level. Handles connect/disconnect lifecycle.
  */
 
 import { useEffect, useRef } from "react"
-import { useSession } from "next-auth/react"
+import { useAuthStore } from "@/lib/auth/auth-store"
+import { getAccessToken } from "@/lib/auth/auth-client"
 import { getWSClient } from "@/lib/ws/client"
 import { handleServerMessage } from "@/lib/ws/opApplier"
 import { useCollaborationStore } from "@/store/collaboration"
 import { useProjectsStore } from "@/store/projects"
 
 export function useCollaboration() {
-  const { data: session, status } = useSession()
+  const { user, isAuthenticated } = useAuthStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const setConnectionState = useCollaborationStore((s) => s.setConnectionState)
   const unsubRef = useRef<(() => void) | null>(null)
 
   // Connect when authenticated
   useEffect(() => {
-    if (status !== "authenticated" || !session) return
+    if (!isAuthenticated || !user) return
 
     const client = getWSClient()
 
@@ -39,8 +40,7 @@ export function useCollaboration() {
     }
 
     // Get JWT token for WS auth
-    // NextAuth stores the token in the session — we pass it to WS
-    const token = (session as { accessToken?: string })?.accessToken || ""
+    const token = getAccessToken()
     if (token) {
       client.connect(token)
     }
@@ -48,11 +48,11 @@ export function useCollaboration() {
     return () => {
       // Don't disconnect on every re-render — only on unmount
     }
-  }, [status, session, setConnectionState])
+  }, [isAuthenticated, user, setConnectionState])
 
   // Join/leave project
   useEffect(() => {
-    if (status !== "authenticated") return
+    if (!isAuthenticated) return
 
     const client = getWSClient()
     if (activeProjectId) {
@@ -60,7 +60,7 @@ export function useCollaboration() {
     } else {
       client.leaveProject()
     }
-  }, [activeProjectId, status])
+  }, [activeProjectId, isAuthenticated])
 
   // Cleanup on unmount
   useEffect(() => {

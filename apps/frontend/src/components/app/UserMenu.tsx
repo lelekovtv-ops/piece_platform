@@ -1,12 +1,12 @@
 "use client"
 
-import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { LogOut, User } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
+import { useAuthStore } from "@/lib/auth/auth-store"
 
 export function UserMenu() {
-  const { data: session, status } = useSession()
+  const { user, isAuthenticated, logout } = useAuthStore()
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -19,9 +19,7 @@ export function UserMenu() {
     return () => document.removeEventListener("mousedown", handler)
   }, [])
 
-  if (status === "loading") return null
-
-  if (!session) {
+  if (!isAuthenticated || !user) {
     return (
       <button
         onClick={() => router.push("/login")}
@@ -33,7 +31,7 @@ export function UserMenu() {
     )
   }
 
-  const initials = (session.user?.name || session.user?.email || "?")
+  const initials = (user.name || user.email || "?")
     .split(/[\s@]/)
     .filter(Boolean)
     .slice(0, 2)
@@ -45,7 +43,7 @@ export function UserMenu() {
       <button
         onClick={() => setOpen(!open)}
         className="flex h-8 w-8 items-center justify-center rounded-full bg-[#D4A853]/20 text-[11px] font-semibold text-[#D4A853] transition-colors hover:bg-[#D4A853]/30"
-        title={session.user?.email || ""}
+        title={user.email || ""}
       >
         {initials}
       </button>
@@ -53,12 +51,15 @@ export function UserMenu() {
       {open && (
         <div className="absolute right-0 top-10 z-50 w-56 rounded-xl border border-white/10 bg-[#1A1917]/95 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
           <div className="px-3 py-2">
-            <p className="text-[12px] font-medium text-[#E7E3DC]">{session.user?.name}</p>
-            <p className="text-[11px] text-white/30">{session.user?.email}</p>
+            <p className="text-[12px] font-medium text-[#E7E3DC]">{user.name}</p>
+            <p className="text-[11px] text-white/30">{user.email}</p>
           </div>
           <div className="my-1 h-px bg-white/8" />
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={async () => {
+              await logout()
+              router.push("/login")
+            }}
             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-white/40 transition-colors hover:bg-white/5 hover:text-white/60"
           >
             <LogOut size={13} />

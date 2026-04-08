@@ -1,11 +1,13 @@
 "use client"
 
-import { signIn } from "next-auth/react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuthStore } from "@/lib/auth/auth-store"
 
 export default function LoginPage() {
   const router = useRouter()
+  const login = useAuthStore((s) => s.login)
+  const register = useAuthStore((s) => s.register)
   const [isRegister, setIsRegister] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -20,36 +22,14 @@ export default function LoginPage() {
 
     try {
       if (isRegister) {
-        const res = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name }),
-        })
-        const data = await res.json()
-        if (!res.ok) {
-          setError(data.error || "Registration failed")
-          setLoading(false)
-          return
-        }
-        // Auto-login after register
+        await register(email, password, name || undefined)
+      } else {
+        await login(email, password)
       }
-
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      })
-
-      if (result?.error) {
-        setError("Invalid email or password")
-        setLoading(false)
-        return
-      }
-
       router.push("/")
       router.refresh()
-    } catch {
-      setError("Something went wrong")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong")
       setLoading(false)
     }
   }
@@ -58,7 +38,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#0E0D0C]">
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-center text-[24px] font-semibold tracking-tight text-[#E7E3DC]">
-          KOZA
+          PIECE
         </h1>
         <p className="mb-8 text-center text-[13px] text-white/30">
           {isRegister ? "Create your account" : "Sign in to continue"}
