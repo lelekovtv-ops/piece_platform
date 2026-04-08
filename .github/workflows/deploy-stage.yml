@@ -46,11 +46,11 @@ jobs:
     steps:
       - name: Generate .env file
         run: |
-          cat > .env.staging << 'ENVEOF'
+          cat > .env.staging <<ENVEOF
           NODE_ENV=production
           MONGO_ROOT_USER=${{ secrets.MONGO_ROOT_USER }}
           MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
-          MONGODB_SYSTEM_DB=system
+          MONGODB_SYSTEM_DB=piece_system
           JWT_PUBLIC_KEY_BASE64=${{ secrets.JWT_PUBLIC_KEY_BASE64 }}
           JWT_PRIVATE_KEY_BASE64=${{ secrets.JWT_PRIVATE_KEY_BASE64 }}
           JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
@@ -67,10 +67,12 @@ jobs:
           SENTRY_DSN_BACKEND=${{ secrets.SENTRY_DSN_BACKEND }}
           NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-          NEXT_PUBLIC_API_BASE_URL=http://${{ secrets.STAGE_HOST }}/api
-          WS_CORS_ORIGINS=http://${{ secrets.STAGE_HOST }}
-          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          NEXT_PUBLIC_API_BASE_URL=${{ vars.STAGE_URL }}/api
+          WS_CORS_ORIGINS=${{ vars.STAGE_URL }}
+          FRONTEND_URL=${{ vars.STAGE_URL }}
+          GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           ENVEOF
+          sed -i 's/^          //' .env.staging
 
       - name: Upload .env to staging server
         uses: appleboy/scp-action@v0.1.7
