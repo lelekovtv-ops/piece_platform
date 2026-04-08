@@ -48,7 +48,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
     ports:
-      - "${MONGO_PORT:-27022}:27017"
+      - "127.0.0.1:${MONGO_PORT:-27022}:27017"
     volumes:
       - mongodb_data:/data/db
     deploy:
@@ -64,7 +64,7 @@ services:
     restart: unless-stopped
     command: redis-server --maxmemory 1gb --maxmemory-policy allkeys-lru --appendonly yes
     ports:
-      - "${REDIS_PORT:-6384}:6379"
+      - "127.0.0.1:${REDIS_PORT:-6384}:6379"
     volumes:
       - redis_data:/data
     deploy:
@@ -83,8 +83,8 @@ services:
       -sd /data
       -m 8222
     ports:
-      - "${NATS_PORT:-4223}:4222"
-      - "${NATS_MONITOR_PORT:-8223}:8222"
+      - "127.0.0.1:${NATS_PORT:-4223}:4222"
+      - "127.0.0.1:${NATS_MONITOR_PORT:-8223}:8222"
     volumes:
       - nats_data:/data
     deploy:
@@ -103,8 +103,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - "${MINIO_PORT:-9006}:9000"
-      - "${MINIO_CONSOLE_PORT:-9007}:9001"
+      - "127.0.0.1:${MINIO_PORT:-9006}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_PORT:-9007}:9001"
     volumes:
       - minio_data:/data
     deploy:
@@ -119,14 +119,14 @@ services:
     image: qdrant/qdrant:v1.14.0
     restart: unless-stopped
     ports:
-      - "${QDRANT_PORT:-6337}:6333"
-      - "${QDRANT_GRPC_PORT:-6338}:6334"
+      - "127.0.0.1:${QDRANT_PORT:-6337}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6338}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 512M
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:6333/healthz"]
       <<: *common-healthcheck
@@ -139,7 +139,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-piece_dev_2026}
       POSTGRES_DB: ${POSTGRES_DB:-piece}
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     deploy:
@@ -184,7 +184,7 @@ services:
       # USERS_SERVICE_URL: http://users-management:3101
       # TEAMS_SERVICE_URL: http://teams-management:3102
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     depends_on:
       <<: *infra-depends
     deploy:
@@ -252,7 +252,7 @@ services:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost/api}
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     deploy:
       resources:
         limits:
@@ -323,7 +323,7 @@ services:
       - grafana_data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     deploy:
       resources:
         limits:

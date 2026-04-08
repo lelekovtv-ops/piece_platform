@@ -79,9 +79,14 @@ export async function initializeServiceCache(serviceName, config, overrides = {}
   const strategy = overrides.strategy ?? 'redis';
 
   if (strategy === 'redis') {
-    const redisUrl = typeof config.get === 'function'
-      ? config.get('redisUrl') ?? config.get('REDIS_URL')
-      : 'redis://localhost:6384';
+    let redisUrl = 'redis://localhost:6384';
+    if (typeof config.get === 'function') {
+      try {
+        redisUrl = config.get('REDIS_URL');
+      } catch {
+        // key may not exist in schema
+      }
+    }
 
     _redisClient = new Redis(redisUrl, {
       maxRetriesPerRequest: 3,
