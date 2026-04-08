@@ -5,7 +5,7 @@ export default mergeConfig(
   shared,
   defineConfig({
     test: {
-      name: 'koza-studio',
+      name: 'piece',
     },
   }),
 );

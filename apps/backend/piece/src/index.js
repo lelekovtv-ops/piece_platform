@@ -99,14 +99,14 @@ const initializeBackgroundServices = async () => {
   componentLogger.info('Permissions initialized');
 
   try {
-    await initializeServiceCache('koza-studio', config, { strategy: 'redis' });
+    await initializeServiceCache('piece', config, { strategy: 'redis' });
     componentLogger.info('Redis cache initialized');
   } catch (err) {
     componentLogger.warn('Redis cache init failed (non-critical)', { error: err.message });
   }
 
   try {
-    await initializePubSub(config, { serviceName: 'koza-studio' });
+    await initializePubSub(config, { serviceName: 'piece' });
     componentLogger.info('NATS PubSub initialized');
   } catch (err) {
     componentLogger.warn('NATS PubSub init failed (non-critical)', { error: err.message });

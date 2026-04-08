@@ -21,7 +21,7 @@ vi.mock('@piece/pubsub', () => ({
     {},
     {
       get(_target, prop) {
-        return (key) => `koza-studio.${String(prop)}.${key ?? ''}`;
+        return (key) => `piece.${String(prop)}.${key ?? ''}`;
       },
     },
   ),

@@ -5,7 +5,7 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope
- *   koza-studio  — project slug
+ *   piece  — project slug
  */
 
 import { ObjectId } from 'mongodb';

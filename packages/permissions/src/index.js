@@ -3,8 +3,8 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope, e.g. @acme
- *   koza-studio  — project slug
- *   koza-studio        — subject prefix
+ *   piece  — project slug
+ *   piece        — subject prefix
  */
 
 export {

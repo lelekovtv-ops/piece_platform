@@ -3,8 +3,8 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope
- *   koza-studio  — project slug
- *   koza-studio        — subject prefix
+ *   piece  — project slug
+ *   piece        — subject prefix
  */
 
 export { mongoIdUtils } from './mongo.js';

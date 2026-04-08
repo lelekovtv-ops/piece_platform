@@ -3,8 +3,8 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope, e.g. @acme
- *   koza-studio  — project slug, e.g. acme-app
- *   koza-studio        — subject prefix used in NATS / cache keys
+ *   piece  — project slug, e.g. acme-app
+ *   piece        — subject prefix used in NATS / cache keys
  */
 
 // ---------------------------------------------------------------------------

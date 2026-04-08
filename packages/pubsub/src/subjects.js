@@ -1,13 +1,13 @@
 /**
  * NATS subject pattern builders.
  *
- * Subject format: koza-studio.{domain}.{action}.{key}
+ * Subject format: piece.{domain}.{action}.{key}
  *
  * Placeholder tokens:
- *   koza-studio  — subject namespace, e.g. "myapp"
+ *   piece  — subject namespace, e.g. "myapp"
  */
 
-const PREFIX = 'koza-studio';
+const PREFIX = 'piece';
 
 export const subjects = Object.freeze({
   // -----------------------------------------------------------------------

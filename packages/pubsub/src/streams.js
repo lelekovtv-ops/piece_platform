@@ -5,7 +5,7 @@
  * Streams are automatically created/updated during initializePubSub().
  *
  * Placeholder tokens:
- *   koza-studio  — subject prefix, e.g. "myapp"
+ *   piece  — subject prefix, e.g. "myapp"
  */
 
 export const StorageType = Object.freeze({
@@ -28,7 +28,7 @@ export const StorageType = Object.freeze({
 export const STREAM_DEFINITIONS = [
   {
     name: 'MESSAGES',
-    subjects: ['koza-studio.msg.>'],
+    subjects: ['piece.msg.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 24 * 60 * 60 * 1_000_000_000, // 24h in nanoseconds
@@ -36,7 +36,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'NOTIFICATIONS',
-    subjects: ['koza-studio.notifications.>'],
+    subjects: ['piece.notifications.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 7 * 24 * 60 * 60 * 1_000_000_000, // 7d
@@ -44,7 +44,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'BILLING',
-    subjects: ['koza-studio.billing.>'],
+    subjects: ['piece.billing.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 7 * 24 * 60 * 60 * 1_000_000_000, // 7d
@@ -52,7 +52,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'INTEGRATIONS',
-    subjects: ['koza-studio.integrations.>'],
+    subjects: ['piece.integrations.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 24 * 60 * 60 * 1_000_000_000, // 24h
@@ -60,7 +60,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'KNOWLEDGE',
-    subjects: ['koza-studio.knowledge.>'],
+    subjects: ['piece.knowledge.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 24 * 60 * 60 * 1_000_000_000, // 24h
@@ -68,7 +68,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'REALTIME',
-    subjects: ['koza-studio.realtime.>'],
+    subjects: ['piece.realtime.>'],
     storage: StorageType.MEMORY,
     retention: 'limits',
     max_age: 60 * 1_000_000_000, // 1 min
@@ -76,7 +76,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'EVENTS',
-    subjects: ['koza-studio.events.>'],
+    subjects: ['piece.events.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 24 * 60 * 60 * 1_000_000_000, // 24h
@@ -84,7 +84,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'TABLES',
-    subjects: ['koza-studio.tables.>'],
+    subjects: ['piece.tables.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 10 * 60 * 1_000_000_000, // 10 min
@@ -92,7 +92,7 @@ export const STREAM_DEFINITIONS = [
   },
   {
     name: 'DLQ',
-    subjects: ['koza-studio.dlq.>'],
+    subjects: ['piece.dlq.>'],
     storage: StorageType.FILE,
     retention: 'limits',
     max_age: 30 * 24 * 60 * 60 * 1_000_000_000, // 30d

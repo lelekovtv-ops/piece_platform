@@ -12,7 +12,7 @@ const configValues = {
   PORT: 3000,
   LOG_LEVEL: 'ERROR',
   MONGODB_URI: 'mongodb://localhost:27017',
-  MONGODB_SYSTEM_DB: 'koza-studio_system',
+  MONGODB_SYSTEM_DB: 'piece_system',
   REDIS_URL: 'redis://localhost:6379',
   NATS_URL: 'nats://localhost:4222',
   API_GATEWAY_URL: 'http://localhost:3100',

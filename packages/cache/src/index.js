@@ -6,8 +6,8 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope
- *   koza-studio  — project slug
- *   koza-studio        — cache key prefix
+ *   piece  — project slug
+ *   piece        — cache key prefix
  */
 
 import Redis from 'ioredis';

@@ -30,7 +30,7 @@
       "acceptButton": "Принять приглашение",
       "expiryInfo": "Приглашение действительно 7 дней."
     },
-    "footer": "© {{year}} koza-studio. Все права защищены."
+    "footer": "© {{year}} Piece. Все права защищены."
   },
   "notifications": {
     "teamMemberAdded": "{{userName}} присоединился к команде",

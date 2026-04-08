@@ -6,8 +6,8 @@
  *
  * Placeholder tokens:
  *   piece     — npm scope
- *   koza-studio  — project slug
- *   koza-studio        — subject prefix
+ *   piece  — project slug
+ *   piece        — subject prefix
  */
 
 import { connect, AckPolicy, DeliverPolicy, StringCodec } from 'nats';
@@ -23,7 +23,7 @@ let _natsConnection = null;
 let _jetStreamClient = null;
 let _jetStreamManager = null;
 let _serviceName = 'unknown';
-let _subjectPrefix = 'koza-studio';
+let _subjectPrefix = 'piece';
 
 const sc = StringCodec();
 
@@ -138,7 +138,7 @@ export async function publishToDlq(domain, event, metadata) {
  * @param {string}   consumerName — durable consumer name (unique per subscriber)
  * @param {Function} handler      — async (event) => void
  * @param {object}   [options]
- * @param {string}   [options.filterSubject] — subject filter (e.g. 'koza-studio.msg.inbound.>')
+ * @param {string}   [options.filterSubject] — subject filter (e.g. 'piece.msg.inbound.>')
  * @param {number}   [options.batchSize]     — messages per pull (default 10)
  * @param {number}   [options.maxWaitMs]     — max wait per pull (default 5000)
  * @returns {Promise<{ stop: Function }>}

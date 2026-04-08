@@ -2,7 +2,7 @@
  * Test user fixtures.
  *
  * Placeholder tokens:
- *   koza-studio  — project slug
+ *   piece  — project slug
  */
 
 export const testUser = Object.freeze({

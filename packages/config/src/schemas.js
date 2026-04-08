@@ -9,7 +9,7 @@ export const BaseConfigSchema = z.object({
 
 export const DatabaseConfigSchema = z.object({
   MONGODB_URI: z.string().min(1),
-  MONGODB_SYSTEM_DB: z.string().min(1).default('koza-studio_system'),
+  MONGODB_SYSTEM_DB: z.string().min(1).default('piece_system'),
 });
 
 export const PubSubConfigSchema = z.object({
@@ -27,7 +27,7 @@ export const ServiceUrlsConfigSchema = z.object({
 
 export const EmailConfigSchema = z.object({
   FROM_EMAIL: z.string().email().default('noreply@localhost'),
-  FROM_NAME: z.string().min(1).default('koza-studio'),
+  FROM_NAME: z.string().min(1).default('piece'),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
   SES_REGION: z.string().default('eu-central-1'),
   SES_ACCESS_KEY_ID: z.string().optional(),

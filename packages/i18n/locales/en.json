@@ -30,7 +30,7 @@
       "acceptButton": "Accept Invitation",
       "expiryInfo": "This invitation expires in 7 days."
     },
-    "footer": "© {{year}} koza-studio. All rights reserved."
+    "footer": "© {{year}} Piece. All rights reserved."
   },
   "notifications": {
     "teamMemberAdded": "{{userName}} joined the team",

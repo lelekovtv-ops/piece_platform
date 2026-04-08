@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 
-const SYSTEM_DB_NAME = process.env.MONGODB_SYSTEM_DB || 'koza-studio_system';
+const SYSTEM_DB_NAME = process.env.MONGODB_SYSTEM_DB || 'piece_system';
 const TABLE_PREFIX = 'table_';
 const TEAM_DB_PREFIX = 'team_';
 

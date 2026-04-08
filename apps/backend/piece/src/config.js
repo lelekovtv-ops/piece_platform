@@ -15,9 +15,9 @@ const ServiceSchema = BaseConfigSchema
   .merge(SecurityConfigSchema)
   .extend({
     PORT: z.coerce.number().default(4030),
-    SERVICE_NAME: z.string().default('koza-studio'),
+    SERVICE_NAME: z.string().default('piece'),
     MONGODB_URI: z.string().default('mongodb://localhost:27022'),
-    MONGODB_SYSTEM_DB: z.string().default('koza-studio_system'),
+    MONGODB_SYSTEM_DB: z.string().default('piece_system'),
     NATS_URL: z.string().default('nats://localhost:4223'),
     REDIS_URL: z.string().default('redis://localhost:6384'),
     FRONTEND_URL: z.string().default('http://localhost:5200'),
@@ -49,6 +49,6 @@ const ServiceSchema = BaseConfigSchema
     QDRANT_URL: z.string().default('http://localhost:6337'),
   });
 
-export const config = new ServiceConfig('koza-studio', ServiceSchema, {
+export const config = new ServiceConfig('piece', ServiceSchema, {
   importMetaUrl: import.meta.url,
 });

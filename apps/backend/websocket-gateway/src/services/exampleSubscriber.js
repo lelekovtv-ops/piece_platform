@@ -32,7 +32,7 @@ export async function initializeExampleSubscriber(io) {
       });
     },
     {
-      filterSubject: 'koza-studio.example.events.>',
+      filterSubject: 'piece.example.events.>',
     },
   );
 

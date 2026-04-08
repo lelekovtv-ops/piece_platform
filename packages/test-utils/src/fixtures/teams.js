@@ -2,7 +2,7 @@
  * Test team fixtures.
  *
  * Placeholder tokens:
- *   koza-studio  — project slug
+ *   piece  — project slug
  */
 
 export const testTeamId = 'team-test-001';
