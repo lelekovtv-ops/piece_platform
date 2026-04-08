@@ -61,23 +61,20 @@ export async function initializePubSub(config, { serviceName, subjectPrefix }) {
 
   // Ensure streams exist
   for (const def of STREAM_DEFINITIONS) {
+    const streamConfig = {
+      name: def.name,
+      subjects: def.subjects,
+      storage: def.storage === 'memory' ? 'memory' : 'file',
+      retention: 'limits',
+      max_age: def.max_age,
+    };
     try {
       await _jetStreamManager.streams.info(def.name);
       // Stream exists — update subjects if changed
-      await _jetStreamManager.streams.update(def.name, {
-        subjects: def.subjects,
-        storage: def.storage === 'memory' ? 1 : 0, // nats.js: 0 = file, 1 = memory
-        max_age: def.max_age,
-      });
+      await _jetStreamManager.streams.update(def.name, streamConfig);
     } catch {
       // Stream does not exist — create
-      await _jetStreamManager.streams.add({
-        name: def.name,
-        subjects: def.subjects,
-        storage: def.storage === 'memory' ? 1 : 0,
-        retention: 0, // limits
-        max_age: def.max_age,
-      });
+      await _jetStreamManager.streams.add(streamConfig);
     }
   }
 }
