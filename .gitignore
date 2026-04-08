@@ -7,3 +7,9 @@ dist/
 .DS_Store
 .turbo/
 .nx/
+
+# Large binary files (ONNX models, WASM) — serve from CDN
+*.wasm
+*.onnx
+*.onnx.metadata
+*.onnx.lock
