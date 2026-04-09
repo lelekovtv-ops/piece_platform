@@ -174,6 +174,18 @@ res.json({
 res.json({ affected: 5, message: 'Records imported' });
 ```
 
+## Development Startup (`dev.sh`)
+
+The `dev.sh` script starts all backend services in parallel:
+
+1. Checks infrastructure containers (MongoDB, Redis, NATS) are running
+2. Discovers services: scans `apps/backend/*/` for directories with `src/index.js`
+3. Starts each service with `node --watch src/index.js` (auto-reload on changes)
+4. Waits for `/health` endpoint (20s timeout, 100ms poll)
+5. Monitors PIDs, graceful shutdown on SIGINT/SIGTERM (SIGTERM → 2s wait → SIGKILL)
+
+Commands: `pnpm run dev:backend` (backend only) or `pnpm run dev` (all services).
+
 ## Graceful Shutdown
 
 ```javascript

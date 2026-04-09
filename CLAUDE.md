@@ -223,7 +223,14 @@ All infrastructure runs via Docker Compose — NEVER use Homebrew-installed Mong
 |-------|----------|
 | Backend patterns | `.claude/rules/backend-patterns.md` |
 | Frontend patterns | `.claude/rules/frontend-patterns.md` |
+| Frontend structure | `.claude/rules/frontend-structure.md` |
+| Frontend auth | `.claude/rules/frontend-auth.md` |
+| Auth flow | `.claude/rules/auth-flow.md` |
+| Permissions system | `.claude/rules/permissions-system.md` |
 | Database patterns | `.claude/rules/database-patterns.md` |
+| Domain types | `.claude/rules/domain-types.md` |
+| WebSocket gateway | `.claude/rules/websocket-gateway.md` |
+| PubSub events | `.claude/rules/pubsub-events.md` |
 | Deploy & infra | `.claude/rules/deploy-infra.md` |
 | Logging rules | `.claude/rules/logging-rules.md` |
 | Testing guide | `.claude/rules/testing-guide.md` |

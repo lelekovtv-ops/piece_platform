@@ -178,14 +178,86 @@ push to main
 
 ## Nginx Reverse Proxy
 
+Config files: `nginx/conf.d/` (prod.conf, stage.conf, staging-ip.conf, staging-ssl.conf).
+
+### Routing Matrix (Production)
+
 ```
-api.{domain}    -> api-gateway:3100 (API)
-                -> websocket-gateway:3109 (WebSocket at /socket.io/)
-app.{domain}    -> platform:3000 (Frontend)
-{domain}        -> redirect to app.{domain}
+{domain}          -> redirect to app.{domain}
+api.{domain}      -> api-gateway:3100 (REST API)
+api.{domain}/socket.io/  -> websocket-gateway:3109 (WebSocket upgrade)
+api.{domain}/img/        -> imagorvideo:8000 (image processing)
+api.{domain}/storage/koza-uploads/  -> minio:9000 (S3 storage)
+app.{domain}      -> platform:3000 (Frontend)
 ```
 
+Staging uses `/api/` prefix rewrite instead of separate subdomain. Grafana at `/grafana/`.
+
+### Rate Limits
+
+| Zone | Rate | Burst | Applied to |
+|------|------|-------|-----------|
+| `api_limit` | 100 req/s | 50 | REST API (`/`) |
+| `img_limit` | 200 req/s | 100 | Image processing (`/img/`) |
+
+### Cache Headers
+
+| Route | Cache-Control | Expires |
+|-------|--------------|---------|
+| `/img/` | `public, immutable` | 7 days |
+| `/storage/koza-uploads/` | `public, immutable` | 30 days |
+| Static assets (js/css/img/fonts) | `public, immutable` | 1 year (prod) / 7 days (staging) |
+
+### Timeouts
+
+| Route | Read/Send Timeout |
+|-------|------------------|
+| REST API | 120 seconds |
+| WebSocket | 86400 seconds (24 hours) |
+| Image processing | 30 seconds |
+
+### Security Headers
+
+- `Strict-Transport-Security`: max-age=63072000 (730 days), includeSubDomains
+- `X-Content-Type-Options`: nosniff
+- `X-Frame-Options`: DENY (prod) / SAMEORIGIN (staging)
+
+### Staging Gate (staging-ssl.conf)
+
+Cookie-based auth: `staging_auth` cookie with preset token. Unauthenticated requests redirect to `/gate`. API and Grafana bypass gate.
+
 SSL: Let's Encrypt via Certbot, auto-renewal.
+
+## Monitoring Stack
+
+### Prometheus
+
+Config: `docker/prometheus/prometheus.yml`. Scrape interval: 15s.
+
+| Job | Target | Metrics Path | Interval |
+|-----|--------|-------------|----------|
+| `piece-backend` | `api-gateway:3100` | `/internal/metrics/prometheus` | 15s |
+| `websocket-gateway` | `websocket-gateway:3109` | `/internal/metrics/prometheus` | 15s |
+| `node-exporter` | `node-exporter:9100` | `/metrics` | 15s |
+| `imagorvideo` | `imagorvideo:5001` | `/metrics` | 30s |
+| `prometheus` | `localhost:9090` | `/metrics` | 30s |
+
+### Loki
+
+Config: `docker/loki/loki-config.yml`.
+
+- Log retention: 168 hours (7 days)
+- TSDB schema v13, 24-hour period indexing
+- Query limit: 720 hours
+- Compaction every 10 minutes
+
+### Grafana
+
+Available at port 3001 (Docker) or `/grafana/` (via nginx). No pre-built dashboards -- configure manually.
+
+### Promtail
+
+Config: `docker/promtail/promtail-config.yml`. Ships Docker container logs to Loki.
 
 ## Secrets Management
 

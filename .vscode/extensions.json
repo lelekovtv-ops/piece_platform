@@ -13,7 +13,8 @@
     "unifiedjs.vscode-mdx",
     "yoavbls.pretty-ts-errors",
     "usernamehw.errorlens",
-    "christian-kohler.path-intellisense"
+    "christian-kohler.path-intellisense",
+    "tomoki1207.pdf"
   ],
   "unwantedRecommendations": []
 }
