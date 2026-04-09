@@ -74,7 +74,7 @@ jobs:
           IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
           GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           ENVEOF
-          sed -i 's/^          //' .env.staging
+          sed -i 's/^[[:space:]]*//' .env.staging
 
       - name: Upload .env to staging server
         uses: appleboy/scp-action@v0.1.7
