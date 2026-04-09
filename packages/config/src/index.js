@@ -47,7 +47,14 @@ export class ServiceConfig {
 
     const envWithServiceName = { SERVICE_NAME: serviceName, ...process.env };
 
-    const result = schema.safeParse(envWithServiceName);
+    // Convert empty string env vars to undefined so Zod .default() works correctly.
+    // Without this, FROM_EMAIL="" (from unset GitHub vars) fails .email() validation
+    // instead of falling back to the default value.
+    const cleaned = Object.fromEntries(
+      Object.entries(envWithServiceName).map(([k, v]) => [k, v === '' ? undefined : v]),
+    );
+
+    const result = schema.safeParse(cleaned);
 
     if (!result.success) {
       const formatted = result.error.issues
