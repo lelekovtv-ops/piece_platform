@@ -71,6 +71,16 @@ function sanitizeUser(user) {
   };
 }
 
+async function resolveUserRole(userId) {
+  try {
+    const teams = await teamService.listByUser(userId);
+    return teams?.[0]?.role || 'manager';
+  } catch (error) {
+    componentLogger.warn('Failed to resolve user role for token', { userId, error: error.message });
+    return 'manager';
+  }
+}
+
 async function register({ email, password, name }) {
   const users = getUsersCollection();
   const normalizedEmail = email.toLowerCase().trim();
@@ -103,15 +113,6 @@ async function register({ email, password, name }) {
   });
 
   const userId = mongoIdUtils.toApiString(result.insertedId);
-  const accessToken = signAccessToken({ sub: userId, email: normalizedEmail });
-  const refreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
-
-  await getRefreshTokensCollection().insertOne({
-    userId: result.insertedId,
-    tokenHash: hashToken(refreshToken),
-    createdAt: now,
-    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-  });
 
   try {
     const teamName = name?.trim() || normalizedEmail.split('@')[0];
@@ -120,6 +121,17 @@ async function register({ email, password, name }) {
   } catch (teamError) {
     componentLogger.warn('Failed to create personal team', { userId, error: teamError.message });
   }
+
+  const role = await resolveUserRole(userId);
+  const accessToken = signAccessToken({ sub: userId, email: normalizedEmail, role });
+  const refreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
+
+  await getRefreshTokensCollection().insertOne({
+    userId: result.insertedId,
+    tokenHash: hashToken(refreshToken),
+    createdAt: now,
+    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+  });
 
   componentLogger.info('User registered', { userId, email: normalizedEmail });
 
@@ -142,8 +154,9 @@ async function login({ email, password }) {
   if (!valid) return null;
 
   const userId = mongoIdUtils.toApiString(user._id);
+  const role = await resolveUserRole(userId);
 
-  const accessToken = signAccessToken({ sub: userId, email: user.email });
+  const accessToken = signAccessToken({ sub: userId, email: user.email, role });
   const refreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
 
   const now = new Date();
@@ -193,7 +206,9 @@ async function refreshAccessToken(token) {
       const users = getUsersCollection();
       const user = await users.findOne({ _id: replaced.userId });
       if (!user) return null;
-      return { accessToken: signAccessToken({ sub: mongoIdUtils.toApiString(user._id), email: user.email }), refreshToken: token };
+      const replacedUserId = mongoIdUtils.toApiString(user._id);
+      const role = await resolveUserRole(replacedUserId);
+      return { accessToken: signAccessToken({ sub: replacedUserId, email: user.email, role }), refreshToken: token };
     }
     return null;
   }
@@ -203,7 +218,8 @@ async function refreshAccessToken(token) {
   if (!user) return null;
 
   const userId = mongoIdUtils.toApiString(user._id);
-  const accessToken = signAccessToken({ sub: userId, email: user.email });
+  const role = await resolveUserRole(userId);
+  const accessToken = signAccessToken({ sub: userId, email: user.email, role });
   const newRefreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
 
   const now = new Date();
@@ -219,7 +235,8 @@ async function refreshAccessToken(token) {
 
 async function issueTokensForUser(user) {
   const userId = mongoIdUtils.toApiString(user._id);
-  const accessToken = signAccessToken({ sub: userId, email: user.email });
+  const role = await resolveUserRole(userId);
+  const accessToken = signAccessToken({ sub: userId, email: user.email, role });
   const refreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
 
   const now = new Date();

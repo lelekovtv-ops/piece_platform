@@ -1,7 +1,7 @@
 # piece — Project Guidelines
 
 > **piece** = KOZA cinematic AI platform + enterprise multi-user backend.
-> Frontend: Next.js 16 + TypeScript (ported from KOZA).
+> Frontend: Next.js 16 + React 19 + TypeScript + Tailwind v4 (ported from KOZA).
 > Backend: Express.js + MongoDB + @piece/* packages (ported from koza-studio).
 
 ## Language
@@ -136,6 +136,12 @@ This project is a migration from the KOZA cinematic AI production platform.
 The workflow editor scaffold is included for the pipeline editor. Located at:
 `apps/frontend/platform/src/features/workflow/`
 
+Additional frontend domain tooling in active use:
+- Slate (`slate`, `slate-react`, `slate-history`) for screenplay editing
+- `@xyflow/react` for pipeline editor
+- Three.js for 3D interactions
+- MediaPipe Tasks Vision for gesture/vision features
+
 ## Anti-patterns
 
 - NEVER `console.log` — use `@piece/logger`
@@ -197,7 +203,7 @@ All infrastructure runs via Docker Compose — NEVER use Homebrew-installed Mong
 | `/fix-audit` | Deep remediation of all audit findings |
 | `/debug` | Systematic root-cause debugging |
 | `/tdd` | Test-driven development cycle |
-| `/design` | Frontend component design with Radix UI |
+| `/design` | Frontend component design with project UI stack |
 | `/code-review` | Request code review via subagent |
 | `/sync-docs` | Bidirectional docs-code sync |
 | `/check-api` | Frontend-Backend API consistency check |

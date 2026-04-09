@@ -183,7 +183,9 @@ const initializeBackgroundServices = async () => {
   const { initializePubSub } = await import('@piece/pubsub');
 
   const mongoUri = config.get('MONGODB_URI');
-  await initializeMultiTenancy(mongoUri);
+  await initializeMultiTenancy(mongoUri, {
+    systemDbName: config.get('MONGODB_SYSTEM_DB'),
+  });
   componentLogger.info('MongoDB connected');
 
   await initializeSystemIndexes();

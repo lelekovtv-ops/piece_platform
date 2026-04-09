@@ -1,6 +1,6 @@
 import { MongoClient } from 'mongodb';
 
-const SYSTEM_DB_NAME = process.env.MONGODB_SYSTEM_DB || 'piece_system';
+const DEFAULT_SYSTEM_DB_NAME = 'piece_system';
 const TABLE_PREFIX = 'table_';
 const TEAM_DB_PREFIX = 'team_';
 
@@ -13,6 +13,7 @@ export async function initializeMultiTenancy(mongoUri, options = {}) {
   }
 
   const {
+    systemDbName = DEFAULT_SYSTEM_DB_NAME,
     maxPoolSize = 200,
     minPoolSize = 20,
     connectTimeoutMS = 10000,
@@ -35,7 +36,7 @@ export async function initializeMultiTenancy(mongoUri, options = {}) {
   });
 
   await client.connect();
-  systemDb = client.db(SYSTEM_DB_NAME);
+  systemDb = client.db(systemDbName);
 }
 
 export function getMongoClient() {

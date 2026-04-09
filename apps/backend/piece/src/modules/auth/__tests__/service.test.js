@@ -44,6 +44,13 @@ vi.mock('../../../config.js', () => ({
   },
 }));
 
+vi.mock('../../teams/service.js', () => ({
+  teamService: {
+    create: vi.fn().mockResolvedValue({ id: 'team-id' }),
+    listByUser: vi.fn().mockResolvedValue([{ id: 'team-id', role: 'owner' }]),
+  },
+}));
+
 vi.mock('bcrypt', () => ({
   default: {
     hash: vi.fn().mockResolvedValue('$2b$12$hashedpassword'),
@@ -59,11 +66,14 @@ vi.mock('jsonwebtoken', () => ({
 }));
 
 const { _mockCollection: mockCollection } = await import('@piece/multitenancy');
+const { teamService } = await import('../../teams/service.js');
 const { authService } = await import('../service.js');
 
 describe('AuthService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    teamService.create.mockResolvedValue({ id: 'team-id' });
+    teamService.listByUser.mockResolvedValue([{ id: 'team-id', role: 'owner' }]);
   });
 
   describe('register', () => {
@@ -93,6 +103,10 @@ describe('AuthService', () => {
       expect(result.user.name).toBe('Test User');
       expect(result.accessToken).toBe('mock.jwt.token');
       expect(result.refreshToken).toBe('mock.jwt.token');
+
+      const jwtMod = (await import('jsonwebtoken')).default;
+      const accessSignCall = jwtMod.sign.mock.calls.find(([, , options]) => options?.algorithm === 'RS256');
+      expect(accessSignCall?.[0]).toEqual(expect.objectContaining({ role: 'owner' }));
     });
 
     it('should throw EMAIL_TAKEN if user exists', async () => {
@@ -157,6 +171,8 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('should return tokens on valid credentials', async () => {
+      teamService.listByUser.mockResolvedValueOnce([{ id: 'team-id', role: 'admin' }]);
+
       mockCollection.findOne.mockResolvedValueOnce({
         _id: 'user-id',
         email: 'test@example.com',
@@ -173,6 +189,10 @@ describe('AuthService', () => {
       expect(result).not.toBeNull();
       expect(result.user.email).toBe('test@example.com');
       expect(result.accessToken).toBe('mock.jwt.token');
+
+      const jwtMod = (await import('jsonwebtoken')).default;
+      const accessSignCall = jwtMod.sign.mock.calls.find(([, , options]) => options?.algorithm === 'RS256');
+      expect(accessSignCall?.[0]).toEqual(expect.objectContaining({ role: 'admin' }));
     });
 
     it('should return null for non-existent user', async () => {
