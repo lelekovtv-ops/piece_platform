@@ -9,7 +9,11 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY packages/ ./packages/
 COPY apps/backend/ ./apps/backend/
-COPY apps/frontend/ ./apps/frontend/
+
+# Copy only frontend package.json to satisfy pnpm workspace resolution
+# (lockfile references all workspace projects, but backend doesn't need frontend source)
+RUN mkdir -p apps/frontend
+COPY apps/frontend/package.json ./apps/frontend/package.json
 
 RUN pnpm install --frozen-lockfile --prod
 

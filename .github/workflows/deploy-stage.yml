@@ -41,7 +41,7 @@ jobs:
     name: Deploy
     needs: gate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Generate .env file
@@ -92,6 +92,7 @@ jobs:
           username: ${{ secrets.STAGE_USER }}
           key: ${{ secrets.STAGE_SSH_KEY }}
           script_stop: true
+          command_timeout: 15m
           script: |
             # First-time setup: clone repo if not a git repository
             if [ ! -d ~/piece/.git ]; then
@@ -113,19 +114,35 @@ jobs:
             git fetch origin stage
             git reset --hard origin/stage
 
+            # Ensure infrastructure is running (no recreate — preserves data & uptime)
+            docker compose up -d mongodb redis nats minio qdrant postgres
+
+            echo "Waiting for infrastructure..."
+            sleep 10
+
+            # Build backend base image
             docker build -f docker/Dockerfile.base -t koza-studio-base:latest .
-            docker compose build --parallel
-            docker compose up -d --remove-orphans --force-recreate
+
+            # Build and recreate only application containers (not infrastructure)
+            docker compose build --parallel api-gateway websocket-gateway platform
+            docker compose up -d --no-deps --force-recreate api-gateway websocket-gateway platform imagorvideo nginx
 
             echo "Waiting for services to be healthy..."
-            for i in $(seq 1 20); do
+            for i in $(seq 1 30); do
               if curl -sf http://127.0.0.1:3100/health > /dev/null 2>&1; then
                 echo "Backend healthy after ${i}0 seconds"
                 break
               fi
-              if [ "$i" -eq 20 ]; then
-                echo "Health check failed after 200 seconds"
-                docker compose logs --tail=50
+              if [ "$i" -eq 30 ]; then
+                echo "Health check failed after 300 seconds"
+                echo "=== api-gateway logs ==="
+                docker compose logs --tail=80 api-gateway
+                echo "=== websocket-gateway logs ==="
+                docker compose logs --tail=30 websocket-gateway
+                echo "=== platform logs ==="
+                docker compose logs --tail=30 platform
+                echo "=== container status ==="
+                docker compose ps
                 exit 1
               fi
               sleep 10
