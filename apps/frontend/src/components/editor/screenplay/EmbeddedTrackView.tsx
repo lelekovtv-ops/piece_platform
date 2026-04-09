@@ -1,6 +1,5 @@
 "use client"
 
-import Image from "next/image"
 import { Fragment, useMemo, useRef, useState, useEffect, useCallback } from "react"
 import { ArrowLeftRight, Film, GripHorizontal, Move, Music, Pause, Play, Scissors, SkipBack, Volume2 } from "lucide-react"
 import { useSpeech } from "@/hooks/useSpeech"

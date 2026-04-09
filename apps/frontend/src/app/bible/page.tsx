@@ -1,7 +1,7 @@
 "use client"
 import { apiChat } from "@/lib/api"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, Box, Check, ChevronDown, Copy, Download, FlipHorizontal2, FlipVertical2, Loader2, MapPin, Mic, Pencil, Play, Plus, RotateCcw, RotateCw, Sparkles, Square, Trash2, Upload, User, Volume2, Wand2, X } from "lucide-react"
@@ -309,7 +309,7 @@ function PrimaryImage({
     <div className="group/image relative overflow-hidden rounded-xl border border-white/8 bg-white/3">
       <div className="relative aspect-square w-full" onDoubleClick={src ? onDoubleClick : undefined}>
         {src ? (
-          <Image src={src} alt={alt} fill unoptimized className="object-cover" />
+          <SmartImage src={src} alt={alt} fill className="object-cover" sizes="(max-width: 768px) 50vw, 200px" />
         ) : (
           <PlaceholderImage icon={placeholder} />
         )}
@@ -432,7 +432,7 @@ function ReferenceStrip({
       <div className="flex flex-wrap gap-2">
         {references.map((reference) => (
           <div key={reference.id} className={`group relative h-12 w-12 overflow-hidden rounded-md border ${canonicalImageId === reference.id ? "border-[#D4A853]" : "border-white/10"}`}>
-            <Image src={reference.url} alt="Reference" fill unoptimized className="object-cover" />
+            <SmartImage src={reference.url} alt="Reference" fill className="object-cover" sizes="48px" />
             <button
               type="button"
               onClick={() => onSetCanonical(reference)}

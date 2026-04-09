@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { useCallback, useMemo, useState } from "react"
 import { ChevronDown, Copy, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react"
 import type { TimelineShot } from "@/store/timeline"
@@ -246,7 +246,7 @@ export function UnifiedShotCard({
         <div className={`w-[200px] shrink-0 border-l border-white/8 bg-[#1a1a2a] flex items-center justify-center ${previewSrc ? "cursor-pointer" : ""}`}>
           {previewSrc ? (
             <div className="relative w-full aspect-video">
-              <Image src={previewSrc} alt="" fill unoptimized className="object-cover" />
+                            <SmartImage src={previewSrc} alt="" fill className="object-cover" sizes="200px" />
             </div>
           ) : (
             <div className="text-center py-6">

@@ -1,7 +1,7 @@
 "use client"
 import { apiChat } from "@/lib/api"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { Loader2, Plus, Sparkles, Wand2, X } from "lucide-react"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useBibleStore } from "@/store/bible"
@@ -160,8 +160,8 @@ export function BibleEntryCard({
         onDrop={handleDrop}
       >
         {imageUrl ? (
-          <Image
-            src={imageUrl} alt={name} fill unoptimized className="object-cover"
+          <SmartImage
+            src={imageUrl} alt={name} fill className="object-cover"
             draggable
             onDragStart={(e) => { e.dataTransfer.setData("text/plain", imageUrl); e.dataTransfer.effectAllowed = "copy" }}
           />

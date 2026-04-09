@@ -8,6 +8,15 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
   },
   serverExternalPackages: [],
+  images: {
+    // All image URLs are relative (/img/*, /storage/*) — served via nginx proxy
+    // Custom loader handles imagor URL passthrough (no server-side optimization needed)
+    loader: "custom",
+    loaderFile: "./src/lib/imageLoader.ts",
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ["image/webp"],
+  },
 };
 
 export default withSentryConfig(nextConfig, {

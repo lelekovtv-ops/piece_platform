@@ -63,7 +63,8 @@ export async function loadBlob(fileId: string): Promise<string | null> {
   })
 
   if (!blob) return null
-  return URL.createObjectURL(blob)
+  const { globalBlobTracker } = await import('./blobUrlTracker')
+  return globalBlobTracker.trackFromBlob(blob)
 }
 
 export async function deleteBlob(fileId: string): Promise<void> {

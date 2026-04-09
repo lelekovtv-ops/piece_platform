@@ -490,7 +490,7 @@ export default function PiecePage() {
         onSubmit={handleSubmit}
         sessionsOpen={drawerOpen}
         onSessionCommand={(text) => {
-          const handler = (window as Record<string, unknown>).__sessionCommand as ((t: string) => void) | undefined
+          const handler = (window as unknown as Record<string, unknown>).__sessionCommand as ((t: string) => void) | undefined
           if (handler) handler(text)
         }}
         gestureMode={gestureMode}

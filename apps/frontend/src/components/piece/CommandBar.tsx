@@ -63,8 +63,8 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
 
   // ── Voice recognition (Web Speech API) ──
   const startListening = useCallback(() => {
-    const SpeechRecognition = (window as unknown as Record<string, unknown>).SpeechRecognition || (window as unknown as Record<string, unknown>).webkitSpeechRecognition
-    if (!SpeechRecognition) {
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (!SpeechRecognitionCtor) {
       setLastAction("Speech not supported in this browser")
       return
     }
@@ -74,7 +74,7 @@ export function CommandBar({ onSubmit, onSessionCommand, sessionsOpen, gestureMo
       return
     }
 
-    const recognition = new SpeechRecognition()
+    const recognition = new SpeechRecognitionCtor()
     recognition.lang = "ru-RU"
     recognition.interimResults = true
     recognition.continuous = false

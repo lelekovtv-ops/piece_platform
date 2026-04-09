@@ -71,7 +71,7 @@ export function useHandTracking(enabled: boolean) {
   const [cameraReady, setCameraReady] = useState(false)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const handLandmarkerRef = useRef<{ detect: (video: HTMLVideoElement) => { landmarks: Landmark[][] } } | null>(null)
+  const handLandmarkerRef = useRef<{ detect: (video: HTMLVideoElement) => { landmarks: Landmark[][] }; detectForVideo: (video: HTMLVideoElement, timestamp: number) => { landmarks: Landmark[][] }; close: () => void } | null>(null)
   const rafRef = useRef<number>(0)
   const streamRef = useRef<MediaStream | null>(null)
 

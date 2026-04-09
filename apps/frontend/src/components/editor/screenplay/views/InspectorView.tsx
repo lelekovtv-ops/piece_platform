@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { BookOpen, Camera, Clapperboard, Film, Image as ImageIcon } from "lucide-react"
 import type { TimelineShot } from "@/store/timeline"
 import type { CharacterEntry, LocationEntry, PropEntry } from "@/lib/bibleParser"
@@ -75,7 +75,7 @@ export function InspectorView({
             >
               <div className="relative h-9 w-16 overflow-hidden rounded-md border border-white/8 bg-white/3">
                 {previewSrc ? (
-                  <Image src={previewSrc} alt="" fill unoptimized className="object-cover" />
+                  <SmartImage src={previewSrc} alt="" fill className="object-cover" sizes="64px" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-[0.16em] text-white/25">
                     No Img
@@ -239,7 +239,7 @@ export function InspectorView({
                       <div key={character.id} className="flex items-center gap-3">
                         <div className="relative h-8 w-8 overflow-hidden rounded-md border border-white/10 bg-white/4">
                           {character.generatedPortraitUrl ? (
-                            <Image src={character.generatedPortraitUrl} alt={character.name} fill unoptimized className="object-cover" />
+                            <SmartImage src={character.generatedPortraitUrl} alt={character.name} fill className="object-cover" sizes="32px" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-[0.14em] text-white/25">
                               {character.name.slice(0, 2)}
@@ -257,7 +257,7 @@ export function InspectorView({
                       <div className="flex items-center gap-3">
                         <div className="relative h-8 w-8 overflow-hidden rounded-md border border-white/10 bg-white/4">
                           {refs.location.generatedImageUrl ? (
-                            <Image src={refs.location.generatedImageUrl} alt={refs.location.name} fill unoptimized className="object-cover" />
+                            <SmartImage src={refs.location.generatedImageUrl} alt={refs.location.name} fill className="object-cover" sizes="32px" />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center text-[9px] uppercase tracking-[0.14em] text-white/25">
                               LOC

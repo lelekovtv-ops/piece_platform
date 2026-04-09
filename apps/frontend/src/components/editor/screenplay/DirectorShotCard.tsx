@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, Camera, ChevronLeft, ChevronRight, Clapperboard, Copy, List, Loader2, Plus, Sparkles, Trash2, Video, Wand2 } from "lucide-react"
 import type { TimelineShot } from "@/store/timeline"
@@ -318,11 +318,10 @@ export function DirectorShotCard({
       onClick={(e) => { if (previewSrc) { e.stopPropagation(); onOpenStudio() } }}
     >
       {previewSrc ? (
-        <Image
+        <SmartImage
           src={previewSrc}
           alt=""
           fill
-          unoptimized
           className="object-cover transition-transform hover:scale-105"
         />
       ) : (

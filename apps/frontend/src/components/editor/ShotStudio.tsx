@@ -33,6 +33,7 @@ import { useProjectsStore } from "@/store/projects"
 import { ImageEditOverlay } from "@/components/ui/ImageEditOverlay"
 import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import { createBlobUrlTracker } from "@/lib/blobUrlTracker"
+import { SmartImg } from "@/components/ui/SmartImg"
 import { buildImagePrompt, getCharactersForShot, getPropsForShot, getLocationsForShot } from "@/lib/promptBuilder"
 import { SceneBibleBubble } from "@/components/editor/screenplay/StoryboardShared"
 import { useScriptStore } from "@/store/script"
@@ -160,7 +161,7 @@ function DockStrip({
                 <Loader2 size={14} className="animate-spin text-[#D4A853]/60" />
               </div>
             ) : (
-              <img src={entry.url} alt="" className="h-full w-full object-cover" draggable={false} />
+              <SmartImg src={entry.url} alt="" className="h-full w-full object-cover" draggable={false} />
             )}
             <span className={`absolute bottom-1 right-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-[7px] font-bold text-black ${sl.color}`}>
               {entry.source === "loading" ? "…" : sl.letter}
@@ -485,13 +486,13 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
   const goHistoryPrev = () => {
     if (historyIdx <= 0 || !shot) return
     const entry = history[historyIdx - 1]
-    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? null, publicUrl: entry.publicUrl ?? null, activeHistoryIndex: historyIdx - 1 })
+    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? undefined, publicUrl: entry.publicUrl ?? undefined, activeHistoryIndex: historyIdx - 1 })
   }
 
   const goHistoryNext = () => {
     if (historyIdx >= history.length - 1 || !shot) return
     const entry = history[historyIdx + 1]
-    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? null, publicUrl: entry.publicUrl ?? null, activeHistoryIndex: historyIdx + 1 })
+    if (entry) updateShot(shotId, { thumbnailUrl: entry.url, thumbnailBlobKey: entry.blobKey, s3Key: entry.s3Key ?? undefined, publicUrl: entry.publicUrl ?? undefined, activeHistoryIndex: historyIdx + 1 })
   }
 
   // ── Playback ──
@@ -607,7 +608,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
       if (e.key === "Enter" && deleteConfirm) {
         e.preventDefault()
         setDeleteConfirm(false)
-        updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: null, publicUrl: null, generationHistory: [], activeHistoryIndex: null })
+        updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: undefined, publicUrl: undefined, generationHistory: [], activeHistoryIndex: null })
       }
       if (e.key === "Enter" && !deleteConfirm && !promptEditing && !dualMode) {
         e.preventDefault()
@@ -1351,7 +1352,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
                             style={{ width: sz, height: sz, transition: ease }}
                           >
                             {ref.url ? (
-                              <img src={ref.url} alt={ref.label} className="h-full w-full object-cover pointer-events-none" draggable={false} />
+                              <SmartImg src={ref.url} alt={ref.label} className="h-full w-full object-cover pointer-events-none" draggable={false} />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center bg-white/5">
                                 <span className={`font-medium text-white/40 leading-tight truncate px-0.5 ${isExpanded ? "text-[10px]" : "text-[7px]"}`}>
@@ -1652,7 +1653,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
           history={history}
           historyIdx={historyIdx}
           sourceLabel={sourceLabel}
-          onSelect={(i) => updateShot(shotId, { thumbnailUrl: history[i].url, thumbnailBlobKey: history[i].blobKey, s3Key: history[i].s3Key ?? null, publicUrl: history[i].publicUrl ?? null, activeHistoryIndex: i })}
+          onSelect={(i) => updateShot(shotId, { thumbnailUrl: history[i].url, thumbnailBlobKey: history[i].blobKey, s3Key: history[i].s3Key ?? undefined, publicUrl: history[i].publicUrl ?? undefined, activeHistoryIndex: i })}
         />
       )}
 
@@ -1676,7 +1677,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
                       isCurrent ? "border-[#D4A853]/50" : "border-white/10 group-hover/cm:border-[#D4A853]/40 group-hover/cm:shadow-md group-hover/cm:shadow-[#D4A853]/10"
                     }`}>
                       {n.shot.thumbnailUrl ? (
-                        <img src={n.shot.thumbnailUrl} alt="" className="h-full w-full object-cover" draggable={false} />
+                        <SmartImg src={n.shot.thumbnailUrl} alt="" className="h-full w-full object-cover" draggable={false} />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-white/5 text-[8px] text-white/20">—</div>
                       )}
@@ -2014,7 +2015,7 @@ export function ShotStudio({ shotId, fullscreen: initialFullscreen, onClose, onN
                 type="button"
                 onClick={() => {
                   setDeleteConfirm(false)
-                  updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: null, publicUrl: null, generationHistory: [], activeHistoryIndex: null })
+                  updateShot(shotId, { thumbnailUrl: null, thumbnailBlobKey: null, s3Key: undefined, publicUrl: undefined, generationHistory: [], activeHistoryIndex: null })
                 }}
                 className="rounded-lg bg-red-500/20 px-4 py-2 text-[12px] text-red-400 transition-colors hover:bg-red-500/30"
               >

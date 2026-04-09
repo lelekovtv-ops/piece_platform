@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback } from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import {
   ArrowLeft, Camera, Check, CheckCircle2, Circle, Clipboard, Clock,
   Copy, Film, Link2, MessageSquare, Palette, Share2, Sparkles,
@@ -214,7 +214,7 @@ function SceneCallSheet({
                   <div key={shot.id} className="overflow-hidden rounded-lg border border-white/8">
                     <div className="relative bg-[#0E1014]" style={{ aspectRatio: "16/9" }}>
                       {shot.thumbnailUrl ? (
-                        <Image src={shot.thumbnailUrl} alt="" fill unoptimized className="object-cover" />
+                        <SmartImage src={shot.thumbnailUrl} alt="" fill className="object-cover" sizes="(max-width: 640px) 25vw, (max-width: 1024px) 16vw, 12.5vw" />
                       ) : (
                         <div className="flex h-full items-center justify-center text-[9px] text-white/15">{i + 1}</div>
                       )}
@@ -236,7 +236,7 @@ function SceneCallSheet({
                 {sceneChars.map((char) => (
                   <div key={char.id} className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.02] px-2.5 py-1.5">
                     {char.generatedPortraitUrl ? (
-                      <Image src={char.generatedPortraitUrl} alt="" width={24} height={24} unoptimized className="h-6 w-6 rounded-full object-cover" />
+                      <SmartImage src={char.generatedPortraitUrl} alt="" width={24} height={24} className="h-6 w-6 rounded-full object-cover" />
                     ) : (
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/15 text-[9px] text-sky-300">{char.name[0]}</div>
                     )}
@@ -255,7 +255,7 @@ function SceneCallSheet({
                 {sceneLocs.map((loc) => (
                   <div key={loc.id} className="flex items-center gap-2 rounded-lg border border-white/8 bg-white/[0.02] px-2.5 py-1.5">
                     {loc.generatedImageUrl ? (
-                      <Image src={loc.generatedImageUrl} alt="" width={24} height={24} unoptimized className="h-6 w-6 rounded object-cover" />
+                      <SmartImage src={loc.generatedImageUrl} alt="" width={24} height={24} className="h-6 w-6 rounded object-cover" />
                     ) : (
                       <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/15 text-[9px] text-emerald-300"><MapPin size={10} /></div>
                     )}

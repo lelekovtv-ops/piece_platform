@@ -21,6 +21,7 @@ import {
 import { deleteBlob } from "@/lib/fileStorage"
 import { saveBlobAdaptive } from "@/lib/blobAdapter"
 import { createLibraryFile, deleteLibraryFile } from "@/lib/api/library-adapter"
+import { SmartImg } from "@/components/ui/SmartImg"
 import { type LibraryFile, useLibraryStore } from "@/store/library"
 import { useProjectsStore } from "@/store/projects"
 import { useBoardStore } from "@/store/board"
@@ -614,7 +615,7 @@ export default function LibraryPage() {
 
                   {/* Thumbnail (when done with image) */}
                   {job.thumbnailUrl && (
-                    <img src={job.thumbnailUrl} alt="" className="h-8 w-8 flex-shrink-0 rounded object-cover" />
+                    <SmartImg src={job.thumbnailUrl} alt="" className="h-8 w-8 flex-shrink-0 rounded object-cover" />
                   )}
 
                   {/* Info */}
@@ -861,7 +862,7 @@ export default function LibraryPage() {
                         <>
                           {refImages.map((ref, i) => (
                             <div key={i} className="group/ref relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg border border-white/10">
-                              <img src={ref.url} alt="" className="h-full w-full object-cover" />
+                              <SmartImg src={ref.url} alt="" className="h-full w-full object-cover" />
                               <button
                                 onClick={() => setRefImages((prev) => prev.filter((_, j) => j !== i))}
                                 className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover/ref:opacity-100"
@@ -894,7 +895,7 @@ export default function LibraryPage() {
                         <div className="flex items-center gap-2">
                           {sourceImage ? (
                             <div className="group/src relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg border" style={{ borderColor: `${accent}40` }}>
-                              <img src={sourceImage.url} alt="" className="h-full w-full object-cover" />
+                              <SmartImg src={sourceImage.url} alt="" className="h-full w-full object-cover" />
                               <button
                                 onClick={() => setSourceImage(null)}
                                 className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover/src:opacity-100"

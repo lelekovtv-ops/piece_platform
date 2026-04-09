@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { useEffect, useRef, useState } from "react"
 import { Loader2, Paperclip, Wand2, X } from "lucide-react"
 
@@ -124,7 +124,7 @@ export function ImageEditOverlay({
         {/* Main row */}
         <div className="flex items-center gap-3">
           <div className="relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-lg border border-white/8">
-            <Image src={imageUrl} alt="Current" fill unoptimized className="object-cover" />
+            <SmartImage src={imageUrl} alt="Current" fill className="object-cover" sizes="52px" />
           </div>
           <input
             ref={inputRef}

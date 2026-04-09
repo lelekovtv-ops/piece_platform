@@ -1,7 +1,7 @@
 "use client"
 import { apiChat } from "@/lib/api"
 
-import Image from "next/image"
+import { SmartImage } from "@/components/ui/SmartImage"
 import { useRouter } from "next/navigation"
 import { AlertTriangle, BookOpen, Camera, ChevronLeft, ChevronRight, Clapperboard, Copy, Crop, Download, Film, FlipHorizontal2, FlipVertical2, Grid, Image as ImageIcon, LayoutPanelLeft, List, Loader2, Maximize, Minimize, MoreHorizontal, Music, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, RotateCw, Settings, SkipBack, SkipForward, Sparkles, Trash2, Video, Volume2, Wand2, X } from "lucide-react"
 import { DirectorMode } from "@/components/director/DirectorMode"
@@ -903,8 +903,8 @@ export function StoryboardPanel({
     updateShot(shotId, {
       thumbnailUrl: entry.url,
       thumbnailBlobKey: entry.blobKey,
-      s3Key: entry.s3Key ?? null,
-      publicUrl: entry.publicUrl ?? null,
+      s3Key: entry.s3Key ?? undefined,
+      publicUrl: entry.publicUrl ?? undefined,
       activeHistoryIndex: next,
     })
   }, [shots, updateShot])
@@ -2126,12 +2126,11 @@ ${shotText}
                             onDoubleClick={() => { if (previewSrc && shot) { setLightbox({ src: previewSrc, shotId: shot.id }); setLightboxTransform({ flipH: false, flipV: false, rotate: 0 }) } }}
                           >
                             {previewSrc ? (
-                              <Image
+                              <SmartImage
                                 src={previewSrc}
                                 alt=""
                                 width={320}
                                 height={320}
-                                unoptimized
                                 className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                 draggable={false}
                               />
@@ -2477,12 +2476,11 @@ ${shotText}
                       onDoubleClick={() => { if (previewSrc && shot) { setLightbox({ src: previewSrc, shotId: shot.id }); setLightboxTransform({ flipH: false, flipV: false, rotate: 0 }) } }}
                     >
                       {previewSrc ? (
-                        <Image
+                        <SmartImage
                           src={previewSrc}
                           alt=""
                           width={320}
                           height={320}
-                          unoptimized
                           className="h-full w-full cursor-zoom-in object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                           draggable={false}
                         />
