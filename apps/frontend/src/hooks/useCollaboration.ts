@@ -75,14 +75,7 @@ export function useCollaboration() {
       }
     }
 
-    const rawSocket = client.getSocket?.()
-    if (rawSocket) {
-      rawSocket.on("disconnect", onDisconnect)
-      rawSocket.on("token_expired", () => {
-        setConnectionState(false, false)
-        scheduleReconnect()
-      })
-    }
+    const unsubDisconnect = client.onDisconnect(onDisconnect)
 
     const token = getAccessToken()
     if (token) {
@@ -90,10 +83,7 @@ export function useCollaboration() {
     }
 
     return () => {
-      if (rawSocket) {
-        rawSocket.off("disconnect", onDisconnect)
-        rawSocket.off("token_expired")
-      }
+      unsubDisconnect()
     }
   }, [isAuthenticated, user, setConnectionState, scheduleReconnect])
 

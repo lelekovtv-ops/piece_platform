@@ -85,4 +85,5 @@ export type ServerMessage =
   | { type: "presence:update"; users: PresenceInfo[] }
   | { type: "user:joined"; userId: string; name: string }
   | { type: "user:left"; userId: string }
+  | { type: "token_expired" }
   | { type: "error"; message: string }

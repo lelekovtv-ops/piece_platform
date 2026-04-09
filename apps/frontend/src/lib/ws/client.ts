@@ -6,6 +6,7 @@
 import type { ClientMessage, ServerMessage, Operation } from "./types"
 
 type MessageHandler = (msg: ServerMessage) => void
+type DisconnectHandler = () => void
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 15000, 30000]
 const HEARTBEAT_INTERVAL = 30_000
@@ -19,6 +20,7 @@ export class KozaWSClient {
   private projectId: string | null = null
   private lastSeenOp = 0
   private handlers = new Set<MessageHandler>()
+  private disconnectHandlers = new Set<DisconnectHandler>()
   private reconnectAttempt = 0
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
@@ -92,6 +94,9 @@ export class KozaWSClient {
       this._connected = false
       this._authenticated = false
       this.stopHeartbeat()
+      for (const handler of this.disconnectHandlers) {
+        try { handler() } catch { /* ignore */ }
+      }
       this.scheduleReconnect()
     }
 
@@ -227,6 +232,11 @@ export class KozaWSClient {
   onMessage(handler: MessageHandler): () => void {
     this.handlers.add(handler)
     return () => this.handlers.delete(handler)
+  }
+
+  onDisconnect(handler: DisconnectHandler): () => void {
+    this.disconnectHandlers.add(handler)
+    return () => this.disconnectHandlers.delete(handler)
   }
 
   // ── Reconnect ──
