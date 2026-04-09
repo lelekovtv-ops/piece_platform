@@ -93,6 +93,20 @@ jobs:
           key: ${{ secrets.STAGE_SSH_KEY }}
           script_stop: true
           script: |
+            # First-time setup: clone repo if not a git repository
+            if [ ! -d ~/piece/.git ]; then
+              echo "First deploy — cloning repository..."
+              TEMP_ENV=""
+              if [ -f ~/piece/.env.staging ]; then
+                TEMP_ENV=$(cat ~/piece/.env.staging)
+              fi
+              rm -rf ~/piece
+              git clone --branch stage git@github.com:${{ github.repository }}.git ~/piece
+              if [ -n "$TEMP_ENV" ]; then
+                echo "$TEMP_ENV" > ~/piece/.env.staging
+              fi
+            fi
+
             cd ~/piece
             mv .env.staging .env
 
