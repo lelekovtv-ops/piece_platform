@@ -57,10 +57,17 @@ All infrastructure runs as Docker containers via `docker-compose.yml`:
 | MongoDB | `mongo:7` | 2G | Primary database (multi-tenant) |
 | Redis | `redis:7-alpine` | 1G | Caching, rate limiting |
 | NATS | `nats:2.10-alpine` | 512M | Messaging (JetStream) |
+| Postgres | `postgres:16-alpine` | 512M | Relational data |
 | MinIO | `minio/minio:latest` | 512M | S3-compatible object storage |
-| Nginx | `nginx:alpine` | -- | Reverse proxy, SSL termination |
+| Imagorvideo | `shumc/imagorvideo` | 1G | Image/video processing proxy |
+| Nginx | `nginx:alpine` | 256M | Reverse proxy, SSL termination |
 | Certbot | `certbot/certbot` | -- | Let's Encrypt SSL certificates |
-| Qdrant | `qdrant/qdrant:v1.14.0` | 4G | Vector search (optional) |
+| Qdrant | `qdrant/qdrant:v1.14.0` | 512M | Vector search (optional) |
+| Prometheus | `prom/prometheus:v2.53.0` | 512M | Metrics collection |
+| Grafana | `grafana/grafana:11.0.0` | 256M | Monitoring dashboard |
+| Loki | `grafana/loki:3.0.0` | 256M | Log aggregation |
+| Promtail | `grafana/promtail:3.0.0` | 128M | Log shipping |
+| Node Exporter | `prom/node-exporter:v1.8.0` | 64M | Host metrics |
 
 ## Dockerfile Strategy
 
@@ -97,7 +104,7 @@ CMD ["node", "src/index.js"]
 
 ### Dockerfile.platform (frontend)
 
-Multi-stage build: Vite build + static serve via nginx or `serve`.
+Multi-stage build: Next.js build + standalone output served via `node server.js`.
 
 ## Docker Compose
 
@@ -150,8 +157,9 @@ healthcheck:
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | PR to main | Lint, build, test |
-| `deploy-prod.yml` | Push to `main` | Build gate + deploy to production |
 | `deploy-stage.yml` | Push to `stage` | Deploy to staging |
+
+> **NOTE:** `deploy-prod.yml` is not yet created. Production deployment workflow is pending.
 
 ### Deploy Flow
 

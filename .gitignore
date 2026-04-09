@@ -13,3 +13,19 @@ dist/
 *.onnx
 *.onnx.metadata
 *.onnx.lock
+
+# IDE / workspace
+*.code-workspace
+
+# Temp files
+.git-commit-msg.txt
+
+# macOS duplicate files (Finder copy artifacts)
+*\ 2.*
+*\ 3.*
+
+# Build artifacts
+*.tsbuildinfo
+
+# Scripts — compiled app bundles
+scripts/*.app/

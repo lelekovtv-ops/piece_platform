@@ -69,10 +69,12 @@ This is an exception to the JS-only rule — the frontend was ported from KOZA (
 |---|---------|---------|
 | 7 | @piece/multitenancy | MongoDB multi-tenant access |
 | 8 | @piece/cache | Redis + StandardTTL + accountLockout + resendLimiter |
-| 9 | @piece/email | AWS SES email sending |
-| 10 | @piece/encryption | AES-256-GCM |
-| 11 | @piece/i18n | Backend notification/email locales (en, ru) |
-| 12 | @piece/test-utils | Mocks + fixtures |
+| 9 | @piece/pubsub | NATS JetStream messaging |
+| 10 | @piece/email | AWS SES email sending |
+| 11 | @piece/encryption | AES-256-GCM |
+| 12 | @piece/i18n | Backend notification/email locales (en, ru) |
+| 13 | @piece/domain-types | Shared TypeScript type definitions |
+| 14 | @piece/test-utils | Mocks + fixtures |
 
 Dependencies: `"@piece/logger": "*"` (NOT `workspace:*`)
 
@@ -160,10 +162,11 @@ Additional frontend domain tooling in active use:
 ## Development Commands
 
 ```bash
-pnpm run dev           # Start all services + frontend
-pnpm run dev:services  # Backend only
-pnpm run dev:platform  # Frontend only
-pnpm run infra         # Start Docker infrastructure (MongoDB, Redis, MinIO, Qdrant)
+pnpm run dev           # Start all services + frontend (backend + frontend + ws)
+pnpm run dev:backend   # Backend only (via dev.sh)
+pnpm run dev:frontend  # Frontend only (Next.js dev server)
+pnpm run dev:ws        # WS collaboration server only
+pnpm run infra         # Start Docker infrastructure (MongoDB, Redis, NATS, MinIO, Qdrant, Postgres)
 pnpm run infra:stop    # Stop infrastructure
 pnpm run lint          # ESLint all packages
 pnpm run build         # Build all
@@ -176,14 +179,18 @@ pnpm test              # Run all tests
 |---------|------|------|
 | MongoDB | 27022 | Docker container |
 | Redis | 6384 | Docker container |
+| NATS | 4223 | Docker container (JetStream) |
+| NATS Monitor | 8223 | NATS monitoring UI |
+| Postgres | 5433 | Docker container |
 | MinIO API | 9006 | S3-compatible storage |
 | MinIO Console | 9007 | Web UI |
 | Qdrant HTTP | 6337 | Vector search |
 | Qdrant gRPC | 6338 | Vector search |
-| Backend | 4030 | Express API |
-| WebSocket GW | 4031 | Real-time |
-| Frontend | 5201 | Next.js dev server |
+| Backend | 4030 | Express API (dev) / 3100 via API Gateway (Docker) |
+| WebSocket GW | 4031 | Real-time (dev) / 3109 (Docker) |
+| Frontend | 5201 | Next.js dev server / 3000 (Docker) |
 | WS Collab | 8080 | Collaboration WebSocket |
+| Grafana | 3001 | Monitoring dashboard (Docker) |
 
 **Important:** These ports are unique to this project. Other projects on this machine use different ports.
 All infrastructure runs via Docker Compose — NEVER use Homebrew-installed MongoDB/Redis.
