@@ -18,11 +18,11 @@ const mockCollection = {
   countDocuments: mockCountDocuments,
 };
 
-vi.mock('piece/multitenancy', () => ({
+vi.mock('@piece/multitenancy', () => ({
   getSystemCollection: vi.fn(() => mockCollection),
 }));
 
-vi.mock('piece/logger', () => ({
+vi.mock('@piece/logger', () => ({
   createLogger: vi.fn(() => ({
     info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
     createComponentLogger: vi.fn(() => ({
@@ -31,7 +31,7 @@ vi.mock('piece/logger', () => ({
   })),
 }));
 
-vi.mock('piece/validation/mongo', () => ({
+vi.mock('@piece/validation/mongo', () => ({
   mongoIdUtils: {
     toObjectId: vi.fn((id) => id),
     toApiString: vi.fn((id) => id?.toString?.() || id),
