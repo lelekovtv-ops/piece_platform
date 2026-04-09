@@ -1,7 +1,6 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useProjectsStore } from "@/store/projects"
 import { useScriptStore } from "@/store/script"
 
 type AutosaveStatus = "idle" | "saving" | "saved"
@@ -70,7 +69,6 @@ export function useAutosave(enabled = true): UseAutosaveResult {
           updatedAt: Date.now(),
         }
         localStorage.setItem(`koza-script-autosave:${projectId}`, JSON.stringify(payload))
-        useProjectsStore.getState().updateProjectTimestamp(projectId)
       }
 
       setStatus("saved")

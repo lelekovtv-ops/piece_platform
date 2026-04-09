@@ -1,5 +1,5 @@
-import { getSystemCollection } from 'piece/multitenancy';
-import { mongoIdUtils } from 'piece/validation/mongo';
+import { getSystemCollection } from '@piece/multitenancy';
+import { mongoIdUtils } from '@piece/validation/mongo';
 import { createComponentLogger } from '../../utils/logger.js';
 import { thumbnailUrl, previewUrl, videoThumbnailUrl } from '../../utils/imagor.js';
 

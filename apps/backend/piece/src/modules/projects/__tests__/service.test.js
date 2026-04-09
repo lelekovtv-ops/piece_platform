@@ -64,16 +64,33 @@ describe('ProjectService', () => {
   });
 
   describe('list', () => {
-    it('should return paginated projects', async () => {
+    it('should return paginated projects without filter (scope=all)', async () => {
       mockToArray.mockResolvedValueOnce([
         { _id: 'p1', name: 'Film 1', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date() },
+        { _id: 'p2', name: 'Film 2', ownerId: 'u2', createdAt: new Date(), updatedAt: new Date() },
       ]);
-      mockCountDocuments.mockResolvedValueOnce(1);
+      mockCountDocuments.mockResolvedValueOnce(2);
 
       const result = await projectService.list(teamId);
 
+      expect(result.data).toHaveLength(2);
+      expect(result.pagination.total).toBe(2);
+      expect(mockFind).toHaveBeenCalledWith({});
+      expect(mockCountDocuments).toHaveBeenCalledWith({});
+    });
+
+    it('should filter by ownerId when provided (scope=my)', async () => {
+      mockToArray.mockResolvedValueOnce([
+        { _id: 'p1', name: 'My Film', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date() },
+      ]);
+      mockCountDocuments.mockResolvedValueOnce(1);
+
+      const result = await projectService.list(teamId, { ownerId: 'user-1' });
+
       expect(result.data).toHaveLength(1);
       expect(result.pagination.total).toBe(1);
+      expect(mockFind).toHaveBeenCalledWith({ ownerId: 'user-1' });
+      expect(mockCountDocuments).toHaveBeenCalledWith({ ownerId: 'user-1' });
     });
   });
 
@@ -99,30 +116,90 @@ describe('ProjectService', () => {
   });
 
   describe('update', () => {
-    it('should update allowed fields', async () => {
+    it('should update allowed fields when user is the owner', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Old Name', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
       mockFindOneAndUpdate.mockResolvedValueOnce({
-        _id: 'proj-1', name: 'New Name', ownerId: 'u1', createdAt: new Date(), updatedAt: new Date(),
+        _id: 'proj-1', name: 'New Name', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
       });
 
-      const result = await projectService.update(teamId, 'proj-1', { name: 'New Name' });
+      const result = await projectService.update(teamId, 'proj-1', { name: 'New Name' }, { userId: 'user-1', userRole: 'manager' });
 
       expect(result.name).toBe('New Name');
+    });
+
+    it('should allow admin to update any project', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Old Name', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
+      mockFindOneAndUpdate.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Admin Edit', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
+
+      const result = await projectService.update(teamId, 'proj-1', { name: 'Admin Edit' }, { userId: 'admin-1', userRole: 'admin' });
+
+      expect(result.name).toBe('Admin Edit');
+    });
+
+    it('should reject update from non-owner non-admin', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Film', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
+
+      const result = await projectService.update(teamId, 'proj-1', { name: 'Hacked' }, { userId: 'other-user', userRole: 'manager' });
+
+      expect(result).toBeNull();
+      expect(mockFindOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('should return null for non-existent project', async () => {
+      mockFindOne.mockResolvedValueOnce(null);
+
+      const result = await projectService.update(teamId, 'proj-1', { name: 'New' }, { userId: 'user-1', userRole: 'manager' });
+
+      expect(result).toBeNull();
     });
   });
 
   describe('remove', () => {
-    it('should delete project', async () => {
+    it('should delete project when user is the owner', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Film', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
       mockDeleteOne.mockResolvedValueOnce({ deletedCount: 1 });
 
-      const result = await projectService.remove(teamId, 'proj-1');
+      const result = await projectService.remove(teamId, 'proj-1', { userId: 'user-1', userRole: 'manager' });
 
       expect(result).toBe(true);
     });
 
-    it('should return false if project not found', async () => {
-      mockDeleteOne.mockResolvedValueOnce({ deletedCount: 0 });
+    it('should allow admin to delete any project', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Film', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
+      mockDeleteOne.mockResolvedValueOnce({ deletedCount: 1 });
 
-      const result = await projectService.remove(teamId, 'nope');
+      const result = await projectService.remove(teamId, 'proj-1', { userId: 'admin-1', userRole: 'owner' });
+
+      expect(result).toBe(true);
+    });
+
+    it('should reject delete from non-owner non-admin', async () => {
+      mockFindOne.mockResolvedValueOnce({
+        _id: 'proj-1', name: 'Film', ownerId: 'user-1', createdAt: new Date(), updatedAt: new Date(),
+      });
+
+      const result = await projectService.remove(teamId, 'proj-1', { userId: 'other-user', userRole: 'manager' });
+
+      expect(result).toBe(false);
+      expect(mockDeleteOne).not.toHaveBeenCalled();
+    });
+
+    it('should return false if project not found', async () => {
+      mockFindOne.mockResolvedValueOnce(null);
+
+      const result = await projectService.remove(teamId, 'nope', { userId: 'user-1', userRole: 'manager' });
 
       expect(result).toBe(false);
     });

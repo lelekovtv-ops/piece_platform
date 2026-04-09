@@ -143,8 +143,9 @@ export function ProjectCard({ project, isSelected, onClick, onDoubleClick }: Pro
   )
 }
 
-function getTimeAgo(timestamp: number): string {
-  const diff = Date.now() - timestamp
+function getTimeAgo(timestamp: string | number): string {
+  const ms = typeof timestamp === "string" ? new Date(timestamp).getTime() : timestamp
+  const diff = Date.now() - ms
   const minutes = Math.floor(diff / 60000)
   if (minutes < 1) return "just now"
   if (minutes < 60) return `${minutes}m ago`
@@ -152,5 +153,5 @@ function getTimeAgo(timestamp: number): string {
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   if (days < 7) return `${days}d ago`
-  return new Date(timestamp).toLocaleDateString()
+  return new Date(ms).toLocaleDateString()
 }

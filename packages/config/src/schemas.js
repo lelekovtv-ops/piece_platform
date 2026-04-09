@@ -26,7 +26,7 @@ export const ServiceUrlsConfigSchema = z.object({
 });
 
 export const EmailConfigSchema = z.object({
-  FROM_EMAIL: z.string().email().default('noreply@localhost'),
+  FROM_EMAIL: z.string().email().default('noreply@localhost.dev'),
   FROM_NAME: z.string().min(1).default('piece'),
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
   SES_REGION: z.string().default('eu-central-1'),

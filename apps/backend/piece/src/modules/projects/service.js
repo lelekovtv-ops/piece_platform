@@ -4,6 +4,8 @@ import { createComponentLogger } from '../../utils/logger.js';
 
 const componentLogger = createComponentLogger('ProjectService');
 
+const ELEVATED_ROLES = new Set(['owner', 'admin']);
+
 function getProjectsCollection(teamId) {
   return getSystemCollection(teamId, 'projects');
 }
@@ -45,12 +47,14 @@ async function create(teamId, { name, description, ownerId }) {
   };
 }
 
-async function list(teamId, { limit = 20, offset = 0 } = {}) {
+async function list(teamId, { limit = 20, offset = 0, ownerId } = {}) {
   const projects = getProjectsCollection(teamId);
 
+  const filter = ownerId ? { ownerId: mongoIdUtils.toObjectId(ownerId) } : {};
+
   const [data, total] = await Promise.all([
-    projects.find({}).sort({ createdAt: -1 }).skip(offset).limit(limit).toArray(),
-    projects.countDocuments({}),
+    projects.find(filter).sort({ createdAt: -1 }).skip(offset).limit(limit).toArray(),
+    projects.countDocuments(filter),
   ]);
 
   return {
@@ -65,7 +69,14 @@ async function getById(teamId, projectId) {
   return sanitizeProject(project);
 }
 
-async function update(teamId, projectId, updates) {
+async function update(teamId, projectId, updates, { userId, userRole } = {}) {
+  const project = await getById(teamId, projectId);
+  if (!project) return null;
+
+  if (userId && !ELEVATED_ROLES.has(userRole) && project.ownerId !== userId) {
+    return null;
+  }
+
   const allowedFields = ['name', 'description'];
   const $set = {};
   for (const field of allowedFields) {
@@ -73,7 +84,7 @@ async function update(teamId, projectId, updates) {
       $set[field] = updates[field];
     }
   }
-  if (Object.keys($set).length === 0) return getById(teamId, projectId);
+  if (Object.keys($set).length === 0) return project;
 
   $set.updatedAt = new Date();
 
@@ -90,7 +101,14 @@ async function update(teamId, projectId, updates) {
   return sanitizeProject(result);
 }
 
-async function remove(teamId, projectId) {
+async function remove(teamId, projectId, { userId, userRole } = {}) {
+  const project = await getById(teamId, projectId);
+  if (!project) return false;
+
+  if (userId && !ELEVATED_ROLES.has(userRole) && project.ownerId !== userId) {
+    return false;
+  }
+
   const projects = getProjectsCollection(teamId);
   const result = await projects.deleteOne({ _id: mongoIdUtils.toObjectId(projectId) });
   if (result.deletedCount === 0) return false;

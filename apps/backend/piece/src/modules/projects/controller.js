@@ -29,9 +29,12 @@ async function create(req, res) {
 async function list(req, res) {
   try {
     const { limit = 20, offset = 0 } = req.query;
+    const ownerId = req.scopeFilter === 'my' ? req.user.id : undefined;
+
     const result = await projectService.list(req.teamId, {
       limit: Number(limit),
       offset: Number(offset),
+      ownerId,
     });
     res.json(result);
   } catch (error) {
@@ -46,6 +49,11 @@ async function getById(req, res) {
     if (!project) {
       return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
     }
+
+    if (req.scopeFilter === 'my' && project.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'FORBIDDEN', message: 'Access denied' });
+    }
+
     res.json(project);
   } catch (error) {
     componentLogger.error('Failed to get project', { error: error.message });
@@ -55,9 +63,14 @@ async function getById(req, res) {
 
 async function update(req, res) {
   try {
-    const project = await projectService.update(req.teamId, req.params.projectId, req.body);
+    const project = await projectService.update(
+      req.teamId,
+      req.params.projectId,
+      req.body,
+      { userId: req.user.id, userRole: req.user.role },
+    );
     if (!project) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found or access denied' });
     }
     res.json(project);
   } catch (error) {
@@ -68,9 +81,13 @@ async function update(req, res) {
 
 async function remove(req, res) {
   try {
-    const deleted = await projectService.remove(req.teamId, req.params.projectId);
+    const deleted = await projectService.remove(
+      req.teamId,
+      req.params.projectId,
+      { userId: req.user.id, userRole: req.user.role },
+    );
     if (!deleted) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found' });
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Project not found or access denied' });
     }
     res.status(204).send();
   } catch (error) {

@@ -14,11 +14,10 @@ import { ProjectCard } from "./ProjectCard"
 
 interface ProjectsScreenProps {
   onOpenProject: (id: string) => void
-  onNewProject: () => void
 }
 
-export function ProjectsScreen({ onOpenProject, onNewProject }: ProjectsScreenProps) {
-  const { projects, createProject, deleteProject } = useProjectsStore()
+export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
+  const { projects, createProject, deleteProject, loadProjects, isLoading, error } = useProjectsStore()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
@@ -29,6 +28,11 @@ export function ProjectsScreen({ onOpenProject, onNewProject }: ProjectsScreenPr
   const filtered = projects.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  // Load projects from backend on mount
+  useEffect(() => {
+    loadProjects()
+  }, [loadProjects])
 
   // Focus input when creating
   useEffect(() => {
@@ -42,9 +46,13 @@ export function ProjectsScreen({ onOpenProject, onNewProject }: ProjectsScreenPr
     setIsCreating(true)
   }, [])
 
-  const handleConfirmCreate = useCallback(() => {
+  const handleConfirmCreate = useCallback(async () => {
     const name = newName.trim() || "Untitled Project"
-    createProject(name)
+    try {
+      await createProject(name)
+    } catch {
+      // error is set in store
+    }
     setIsCreating(false)
     setNewName("")
   }, [newName, createProject])
@@ -66,11 +74,15 @@ export function ProjectsScreen({ onOpenProject, onNewProject }: ProjectsScreenPr
     [handleConfirmCreate, handleCancelCreate],
   )
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!selectedId) return
     const name = projects.find((p) => p.id === selectedId)?.name
-    if (confirm(`Удалить проект "${name}"?`)) {
-      deleteProject(selectedId)
+    if (confirm(`Delete project "${name}"?`)) {
+      try {
+        await deleteProject(selectedId)
+      } catch {
+        // error is set in store
+      }
       setSelectedId(null)
     }
   }, [selectedId, projects, deleteProject])
@@ -140,7 +152,23 @@ export function ProjectsScreen({ onOpenProject, onNewProject }: ProjectsScreenPr
 
       {/* Grid */}
       <div className="flex-1 overflow-auto px-8 pb-4">
-        {filtered.length === 0 && !isCreating ? (
+        {isLoading && projects.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="text-sm text-white/30">Loading projects...</div>
+          </div>
+        ) : error && projects.length === 0 ? (
+          <div className="flex h-full items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="text-sm text-red-400/70">{error}</div>
+              <button
+                onClick={() => loadProjects()}
+                className="text-xs text-white/40 hover:text-white/60 underline"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        ) : filtered.length === 0 && !isCreating ? (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-6">
               <KozaLogo size="lg" variant="default" className="text-white/8 mb-2" />

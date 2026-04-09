@@ -48,25 +48,33 @@ export default function StudioPage() {
     setActiveBibleProject(id)
   }, [openProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
 
-  const handleCreate = useCallback(() => {
-    const id = createProject("Untitled PIECE")
-    setActiveScriptProject(id)
-    setActiveTimelineProject(id)
-    setActiveBibleProject(id)
+  const handleCreate = useCallback(async () => {
+    try {
+      const id = await createProject("Untitled PIECE")
+      setActiveScriptProject(id)
+      setActiveTimelineProject(id)
+      setActiveBibleProject(id)
+    } catch {
+      // error is set in store
+    }
   }, [createProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
 
   const handleImport = useCallback(async (file: File) => {
     const result = await importFromFile(file)
     const name = result.title || file.name.replace(/\.\w+$/, "") || "Imported PIECE"
-    const id = createProject(name)
-    setActiveScriptProject(id)
-    setActiveTimelineProject(id)
-    setActiveBibleProject(id)
-    useScriptStore.getState().setBlocks(result.blocks)
-    if (result.title) useScriptStore.getState().setTitle(result.title)
+    try {
+      const id = await createProject(name)
+      setActiveScriptProject(id)
+      setActiveTimelineProject(id)
+      setActiveBibleProject(id)
+      useScriptStore.getState().setBlocks(result.blocks)
+      if (result.title) useScriptStore.getState().setTitle(result.title)
+    } catch {
+      // error is set in store
+    }
   }, [createProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
 
-  const handleImportFromScriptwriter = useCallback(() => {
+  const handleImportFromScriptwriter = useCallback(async () => {
     // Read scratchpad blocks from root state (activeProjectId must be null)
     const state = useScriptStore.getState()
     // Temporarily switch to null to read scratchpad
@@ -80,24 +88,32 @@ export default function StudioPage() {
     if (scratchpadBlocks.length === 0) return
 
     const name = scratchpadTitle?.trim() || "From Scriptwriter"
-    const id = createProject(name)
-    setActiveScriptProject(id)
-    setActiveTimelineProject(id)
-    setActiveBibleProject(id)
-    // Copy scratchpad blocks into the new project
-    useScriptStore.getState().setBlocks(scratchpadBlocks)
-    if (scratchpadTitle) useScriptStore.getState().setTitle(scratchpadTitle)
+    try {
+      const id = await createProject(name)
+      setActiveScriptProject(id)
+      setActiveTimelineProject(id)
+      setActiveBibleProject(id)
+      // Copy scratchpad blocks into the new project
+      useScriptStore.getState().setBlocks(scratchpadBlocks)
+      if (scratchpadTitle) useScriptStore.getState().setTitle(scratchpadTitle)
+    } catch {
+      // error is set in store
+    }
   }, [createProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
 
-  const handlePasteSubmit = useCallback(() => {
+  const handlePasteSubmit = useCallback(async () => {
     if (!pasteText.trim()) return
     const imported = parseTextToBlocks(pasteText)
     const name = "Pasted PIECE"
-    const id = createProject(name)
-    setActiveScriptProject(id)
-    setActiveTimelineProject(id)
-    setActiveBibleProject(id)
-    useScriptStore.getState().setBlocks(imported)
+    try {
+      const id = await createProject(name)
+      setActiveScriptProject(id)
+      setActiveTimelineProject(id)
+      setActiveBibleProject(id)
+      useScriptStore.getState().setBlocks(imported)
+    } catch {
+      // error is set in store
+    }
     setPasteMode(false)
     setPasteText("")
   }, [pasteText, createProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
@@ -116,17 +132,24 @@ export default function StudioPage() {
     setActiveBibleProject(null)
   }, [closeProject, setActiveScriptProject, setActiveTimelineProject, setActiveBibleProject])
 
-  const handleDelete = useCallback((id: string, e: React.MouseEvent) => {
+  const handleDelete = useCallback(async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (confirm("Delete this PIECE?")) deleteProject(id)
+    if (confirm("Delete this PIECE?")) {
+      try {
+        await deleteProject(id)
+      } catch {
+        // error is set in store
+      }
+    }
   }, [deleteProject])
 
-  const formatDate = (ts: number) => {
-    const diff = Date.now() - ts
+  const formatDate = (ts: string | number) => {
+    const ms = typeof ts === "string" ? new Date(ts).getTime() : ts
+    const diff = Date.now() - ms
     if (diff < 60_000) return "Just now"
     if (diff < 3600_000) return `${Math.floor(diff / 60_000)}m ago`
     if (diff < 86400_000) return `${Math.floor(diff / 3600_000)}h ago`
-    return new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
+    return new Date(ms).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
   }
 
   useSyncOrchestrator()
@@ -241,7 +264,7 @@ export default function StudioPage() {
                 <p className="mb-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-white/20">Recent</p>
                 <div className="max-h-48 space-y-1.5 overflow-auto">
                   {projects
-                    .sort((a, b) => b.updatedAt - a.updatedAt)
+                    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
                     .slice(0, 8)
                     .map((p) => (
                       <button

@@ -37,10 +37,12 @@ class SecretsManager {
 export class ServiceConfig {
   #values;
   #secrets;
+  #schema;
 
   constructor(serviceName, schema, options = {}) {
     const { importMetaUrl } = options;
 
+    this.#schema = schema;
     this.#loadEnvFiles(importMetaUrl);
 
     const envWithServiceName = { SERVICE_NAME: serviceName, ...process.env };
@@ -63,7 +65,7 @@ export class ServiceConfig {
   }
 
   get(key) {
-    if (!(key in this.#values)) {
+    if (!Object.prototype.hasOwnProperty.call(this.#values, key) && !(key in this.#schema.shape)) {
       throw new Error(`Configuration key "${key}" is not defined in the schema`);
     }
     return this.#values[key];

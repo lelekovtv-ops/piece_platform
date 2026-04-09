@@ -45,6 +45,7 @@ async function create({ name, ownerId }) {
     teamId: result.insertedId,
     userId: mongoIdUtils.toObjectId(ownerId),
     role: 'owner',
+    status: 'active',
     joinedAt: now,
     updatedAt: now,
   });
@@ -133,6 +134,7 @@ async function addMember(teamId, userId, role = 'manager') {
     teamId: mongoIdUtils.toObjectId(teamId),
     userId: mongoIdUtils.toObjectId(userId),
     role,
+    status: 'active',
     joinedAt: now,
     updatedAt: now,
   });
