@@ -32,7 +32,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: pnpm run lint
+        run: pnpm exec nx run-many -t lint --skip-nx-cache
 
       - name: Test
         run: pnpm test
