@@ -17,8 +17,8 @@ vi.mock("next/image", () => ({
 // Must import AFTER mocking next/image
 const { SmartImage } = await import("../../components/ui/SmartImage")
 
-function render(jsx: React.ReactElement) {
-  const ReactDOMServer = require("react-dom/server")
+async function render(jsx: React.ReactElement) {
+  const ReactDOMServer = await import("react-dom/server")
   return ReactDOMServer.renderToString(jsx)
 }
 

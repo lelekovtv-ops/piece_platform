@@ -3,8 +3,8 @@ import React from "react"
 
 const { SmartImg } = await import("../../components/ui/SmartImg")
 
-function render(jsx: React.ReactElement) {
-  const ReactDOMServer = require("react-dom/server")
+async function render(jsx: React.ReactElement) {
+  const ReactDOMServer = await import("react-dom/server")
   return ReactDOMServer.renderToString(jsx)
 }
 
