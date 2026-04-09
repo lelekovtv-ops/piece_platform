@@ -23,8 +23,8 @@ async function render(jsx: React.ReactElement) {
 }
 
 describe("SmartImage", () => {
-  it("should render an img tag with correct src", () => {
-    const html = render(
+  it("should render an img tag with correct src", async () => {
+    const html = await render(
       React.createElement(SmartImage, {
         src: "/img/abc/fill/200x200/koza-uploads/test.jpg",
         alt: "test",
@@ -35,8 +35,8 @@ describe("SmartImage", () => {
     expect(html).toContain('alt="test"')
   })
 
-  it("should include shimmer skeleton class", () => {
-    const html = render(
+  it("should include shimmer skeleton class", async () => {
+    const html = await render(
       React.createElement(SmartImage, {
         src: "/img/abc/test.jpg",
         alt: "test",
@@ -46,8 +46,8 @@ describe("SmartImage", () => {
     expect(html).toContain("animate-pulse")
   })
 
-  it("should forward className to the wrapper", () => {
-    const html = render(
+  it("should forward className to the wrapper", async () => {
+    const html = await render(
       React.createElement(SmartImage, {
         src: "/img/abc/test.jpg",
         alt: "test",
@@ -58,8 +58,8 @@ describe("SmartImage", () => {
     expect(html).toContain("object-cover")
   })
 
-  it("should accept sizes prop", () => {
-    const html = render(
+  it("should accept sizes prop", async () => {
+    const html = await render(
       React.createElement(SmartImage, {
         src: "/img/abc/test.jpg",
         alt: "test",
@@ -70,8 +70,8 @@ describe("SmartImage", () => {
     expect(html).toContain("(max-width: 768px) 100vw, 50vw")
   })
 
-  it("should accept storageKey for fallback", () => {
-    const html = render(
+  it("should accept storageKey for fallback", async () => {
+    const html = await render(
       React.createElement(SmartImage, {
         src: "/img/abc/test.jpg",
         alt: "test",

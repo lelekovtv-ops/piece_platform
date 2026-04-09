@@ -9,8 +9,8 @@ async function render(jsx: React.ReactElement) {
 }
 
 describe("SmartImg", () => {
-  it("should render an img tag with correct src", () => {
-    const html = render(
+  it("should render an img tag with correct src", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "blob:http://localhost/abc",
         alt: "test",
@@ -20,8 +20,8 @@ describe("SmartImg", () => {
     expect(html).toContain('alt="test"')
   })
 
-  it("should include shimmer skeleton class on wrapper", () => {
-    const html = render(
+  it("should include shimmer skeleton class on wrapper", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "blob:http://localhost/abc",
         alt: "test",
@@ -30,8 +30,8 @@ describe("SmartImg", () => {
     expect(html).toContain("animate-pulse")
   })
 
-  it("should default to loading=lazy", () => {
-    const html = render(
+  it("should default to loading=lazy", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "blob:http://localhost/abc",
         alt: "test",
@@ -40,8 +40,8 @@ describe("SmartImg", () => {
     expect(html).toContain('loading="lazy"')
   })
 
-  it("should allow overriding loading to eager", () => {
-    const html = render(
+  it("should allow overriding loading to eager", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "blob:http://localhost/abc",
         alt: "test",
@@ -51,8 +51,8 @@ describe("SmartImg", () => {
     expect(html).toContain('loading="eager"')
   })
 
-  it("should forward className", () => {
-    const html = render(
+  it("should forward className", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "/storage/koza-uploads/test.jpg",
         alt: "test",
@@ -62,8 +62,8 @@ describe("SmartImg", () => {
     expect(html).toContain("object-cover")
   })
 
-  it("should accept storageKey for fallback", () => {
-    const html = render(
+  it("should accept storageKey for fallback", async () => {
+    const html = await render(
       React.createElement(SmartImg, {
         src: "/img/abc/test.jpg",
         alt: "test",
