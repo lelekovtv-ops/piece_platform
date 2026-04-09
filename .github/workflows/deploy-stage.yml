@@ -57,20 +57,20 @@ jobs:
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           INTERNAL_TOKEN=${{ secrets.INTERNAL_TOKEN }}
           LOG_LEVEL=INFO
-          FROM_EMAIL=${{ vars.FROM_EMAIL }}
-          FROM_NAME=${{ vars.FROM_NAME }}
-          SES_REGION=${{ vars.SES_REGION }}
+          FROM_EMAIL=${{ vars.FROM_EMAIL || 'noreply@piece-app.com' }}
+          FROM_NAME=${{ vars.FROM_NAME || 'Piece' }}
+          SES_REGION=${{ vars.SES_REGION || 'eu-central-1' }}
           SES_ACCESS_KEY_ID=${{ secrets.SES_ACCESS_KEY_ID }}
           SES_SECRET_ACCESS_KEY=${{ secrets.SES_SECRET_ACCESS_KEY }}
-          SES_CONFIGURATION_SET=${{ vars.SES_CONFIGURATION_SET }}
+          SES_CONFIGURATION_SET=${{ vars.SES_CONFIGURATION_SET || '' }}
           DISABLE_EMAIL_SENDING=true
           SENTRY_DSN_BACKEND=${{ secrets.SENTRY_DSN_BACKEND }}
           NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
           NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
-          NEXT_PUBLIC_API_BASE_URL=${{ vars.STAGE_URL }}/api
-          WS_CORS_ORIGINS=${{ vars.STAGE_URL }}
-          FRONTEND_URL=${{ vars.STAGE_URL }}
-          S3_PUBLIC_URL=${{ vars.STAGE_URL }}/storage/koza-uploads
+          NEXT_PUBLIC_API_BASE_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/api
+          WS_CORS_ORIGINS=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}
+          FRONTEND_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}
+          S3_PUBLIC_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/storage/koza-uploads
           IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
           GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           ENVEOF
@@ -120,8 +120,8 @@ jobs:
             echo "Waiting for infrastructure..."
             sleep 10
 
-            # Build backend base image
-            docker build -f docker/Dockerfile.base -t koza-studio-base:latest .
+            # Build backend base image (--no-cache ensures code fixes are included)
+            docker build --no-cache -f docker/Dockerfile.base -t koza-studio-base:latest .
 
             # Build and recreate only application containers (not infrastructure)
             docker compose build --parallel api-gateway websocket-gateway platform
