@@ -29,8 +29,8 @@ function setRefreshTokenCookie(res, refreshToken) {
   res.cookie('piece_rt', refreshToken, {
     httpOnly: true,
     secure: config.get('NODE_ENV') === 'production',
-    sameSite: 'strict',
-    path: '/v1/auth',
+    sameSite: 'lax',
+    path: '/',
     maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   });
 }
@@ -39,8 +39,8 @@ function clearRefreshTokenCookie(res) {
   res.clearCookie('piece_rt', {
     httpOnly: true,
     secure: config.get('NODE_ENV') === 'production',
-    sameSite: 'strict',
-    path: '/v1/auth',
+    sameSite: 'lax',
+    path: '/',
   });
 }
 

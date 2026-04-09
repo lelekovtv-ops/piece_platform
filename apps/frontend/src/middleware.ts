@@ -19,18 +19,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // In development, cookie is set by backend on a different port (cross-origin),
-  // so it won't be visible here. AuthProvider handles client-side protection.
-  // In production, frontend and backend share the same domain via Nginx proxy,
-  // so the cookie is visible and server-side redirect works.
-  const isDev = process.env.NODE_ENV === "development"
-  if (isDev) {
-    return NextResponse.next()
-  }
-
   const hasRefreshToken = request.cookies.has("piece_rt")
 
-  if (!hasRefreshToken) {
+  if (!hasRefreshToken && process.env.NODE_ENV !== "development") {
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("redirect", pathname)
     return NextResponse.redirect(loginUrl)
