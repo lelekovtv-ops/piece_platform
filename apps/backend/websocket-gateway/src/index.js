@@ -121,6 +121,8 @@ eventsNs.use((socket, next) => {
   next();
 });
 
+const TOKEN_RECHECK_INTERVAL_MS = 5 * 60 * 1000;
+
 eventsNs.on('connection', (socket) => {
   const { teamId, userId } = socket.handshake.query;
   totalConnections++;
@@ -131,7 +133,6 @@ eventsNs.on('connection', (socket) => {
     userId,
   });
 
-  // Join rooms for targeted delivery
   if (teamId) {
     socket.join(`team:${teamId}`);
   }
@@ -139,7 +140,29 @@ eventsNs.on('connection', (socket) => {
     socket.join(`user:${userId}`);
   }
 
+  const recheckTimer = setInterval(() => {
+    const token = socket.handshake.auth?.token || socket.handshake.headers?.authorization;
+    const user = token ? verifyToken(token) : null;
+    if (!user) {
+      componentLogger.info('Token expired, disconnecting', { socketId: socket.id, userId });
+      socket.emit('token_expired');
+      socket.disconnect(true);
+    }
+  }, TOKEN_RECHECK_INTERVAL_MS);
+
+  socket.on('update_token', (newToken) => {
+    const user = verifyToken(newToken);
+    if (user) {
+      socket.handshake.auth.token = newToken;
+      socket.data.user = user;
+    } else {
+      socket.emit('token_expired');
+      socket.disconnect(true);
+    }
+  });
+
   socket.on('disconnect', (reason) => {
+    clearInterval(recheckTimer);
     componentLogger.debug('Client disconnected', {
       socketId: socket.id,
       reason,

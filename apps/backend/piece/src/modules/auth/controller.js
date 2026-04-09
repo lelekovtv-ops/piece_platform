@@ -1,7 +1,12 @@
+import crypto from 'node:crypto';
 import { authService } from './service.js';
+import { sessionService } from './session-service.js';
+import { auditService } from './audit-service.js';
+import { recordFailedLoginAndCheck, clearSuspiciousTracking } from './suspicious-activity.js';
 import { generateMagicLink, sendMagicLinkEmail, verifyMagicLink } from './magic-link-service.js';
 import { validateEmailDomain, validateMxRecord } from '@piece/validation/email';
 import { createAccountLockout } from '@piece/cache/accountLockout';
+import { createResendLimiter } from '@piece/cache/resendLimiter';
 import { getRedisClient } from '@piece/cache';
 import { createComponentLogger } from '../../utils/logger.js';
 import { config } from '../../config.js';
@@ -11,7 +16,40 @@ const componentLogger = createComponentLogger('AuthController');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
 
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function getRequestMeta(req) {
+  return { ip: req.ip, userAgent: req.headers['user-agent'] || '' };
+}
+const REFRESH_TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+function setRefreshTokenCookie(res, refreshToken) {
+  res.cookie('piece_rt', refreshToken, {
+    httpOnly: true,
+    secure: config.get('NODE_ENV') === 'production',
+    sameSite: 'strict',
+    path: '/v1/auth',
+    maxAge: REFRESH_TOKEN_MAX_AGE_MS,
+  });
+}
+
+function clearRefreshTokenCookie(res) {
+  res.clearCookie('piece_rt', {
+    httpOnly: true,
+    secure: config.get('NODE_ENV') === 'production',
+    sameSite: 'strict',
+    path: '/v1/auth',
+  });
+}
+
 let _lockout = null;
+let _magicLinkLimiter = null;
+
+const MEMORY_LOCKOUT_MAX = 5;
+const MEMORY_LOCKOUT_TTL_MS = 900_000;
+const memoryLockout = new Map();
 
 function getLockout() {
   if (!_lockout) {
@@ -21,6 +59,39 @@ function getLockout() {
     }
   }
   return _lockout;
+}
+
+function getMemoryLockoutEntry(email) {
+  const key = email.toLowerCase();
+  const entry = memoryLockout.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    memoryLockout.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function recordMemoryFailedAttempt(email) {
+  const key = email.toLowerCase();
+  const entry = memoryLockout.get(key) || { count: 0, expiresAt: Date.now() + MEMORY_LOCKOUT_TTL_MS };
+  entry.count += 1;
+  entry.expiresAt = Date.now() + MEMORY_LOCKOUT_TTL_MS;
+  memoryLockout.set(key, entry);
+}
+
+function resetMemoryLockout(email) {
+  memoryLockout.delete(email.toLowerCase());
+}
+
+function getMagicLinkLimiter() {
+  if (!_magicLinkLimiter) {
+    const redis = getRedisClient();
+    if (redis) {
+      _magicLinkLimiter = createResendLimiter(redis, { maxPerDay: 3 });
+    }
+  }
+  return _magicLinkLimiter;
 }
 
 async function register(req, res) {
@@ -57,8 +128,12 @@ async function register(req, res) {
     }
 
     const result = await authService.register({ email, password, name });
+    const meta = getRequestMeta(req);
     componentLogger.info('User registered', { email: email.toLowerCase() });
-    res.status(201).json(result);
+    await sessionService.createSession(result.user.id, hashToken(result.refreshToken), meta);
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.REGISTER, { userId: result.user.id, email: email.toLowerCase(), ...meta });
+    setRefreshTokenCookie(res, result.refreshToken);
+    res.status(201).json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     if (error.code === 'EMAIL_TAKEN') {
       return res.status(409).json({ error: 'CONFLICT', message: error.message });
@@ -82,14 +157,26 @@ async function login(req, res) {
       });
     }
 
+    const meta = getRequestMeta(req);
     const lockout = getLockout();
     if (lockout) {
       const { locked, ttl } = await lockout.isLocked(email);
       if (locked) {
+        auditService.logAuthEvent(auditService.AUTH_EVENTS.ACCOUNT_LOCKED, { email, ...meta, reason: 'too_many_attempts' });
         return res.status(429).json({
           error: 'ACCOUNT_LOCKED',
           message: 'Too many failed login attempts. Please try again later.',
           retryAfter: ttl,
+        });
+      }
+    } else {
+      const memEntry = getMemoryLockoutEntry(email);
+      if (memEntry && memEntry.count >= MEMORY_LOCKOUT_MAX) {
+        auditService.logAuthEvent(auditService.AUTH_EVENTS.ACCOUNT_LOCKED, { email, ...meta, reason: 'too_many_attempts' });
+        return res.status(429).json({
+          error: 'ACCOUNT_LOCKED',
+          message: 'Too many failed login attempts. Please try again later.',
+          retryAfter: Math.ceil((memEntry.expiresAt - Date.now()) / 1000),
         });
       }
     }
@@ -98,16 +185,26 @@ async function login(req, res) {
     if (!result) {
       if (lockout) {
         await lockout.recordFailedAttempt(email);
+      } else {
+        recordMemoryFailedAttempt(email);
       }
+      auditService.logAuthEvent(auditService.AUTH_EVENTS.LOGIN_FAILED, { email, ...meta, reason: 'invalid_credentials' });
+      recordFailedLoginAndCheck(email, meta.ip).catch(() => {});
       return res.status(401).json({ error: 'UNAUTHORIZED', message: 'Invalid credentials' });
     }
 
     if (lockout) {
       await lockout.resetAttempts(email);
+    } else {
+      resetMemoryLockout(email);
     }
 
     componentLogger.info('User logged in', { email });
-    res.json(result);
+    await sessionService.createSession(result.user.id, hashToken(result.refreshToken), meta);
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.LOGIN_SUCCESS, { userId: result.user.id, email, ...meta });
+    clearSuspiciousTracking(email).catch(() => {});
+    setRefreshTokenCookie(res, result.refreshToken);
+    res.json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Login failed', { error: error.message });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Login failed' });
@@ -116,7 +213,7 @@ async function login(req, res) {
 
 async function refresh(req, res) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.piece_rt || req.body?.refreshToken;
 
     if (!refreshToken) {
       return res.status(400).json({
@@ -125,12 +222,18 @@ async function refresh(req, res) {
       });
     }
 
+    const oldTokenHash = hashToken(refreshToken);
     const result = await authService.refreshAccessToken(refreshToken);
     if (!result) {
+      clearRefreshTokenCookie(res);
       return res.status(401).json({ error: 'TOKEN_EXPIRED', message: 'Invalid or expired refresh token' });
     }
 
-    res.json(result);
+    const newTokenHash = hashToken(result.refreshToken);
+    await sessionService.updateSessionTokenHash(oldTokenHash, newTokenHash).catch(() => {});
+
+    setRefreshTokenCookie(res, result.refreshToken);
+    res.json({ accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Token refresh failed', { error: error.message });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Token refresh failed' });
@@ -139,8 +242,10 @@ async function refresh(req, res) {
 
 async function logout(req, res) {
   try {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.piece_rt || req.body?.refreshToken;
     await authService.logout(refreshToken);
+    clearRefreshTokenCookie(res);
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.LOGOUT, { userId: req.user?.id, ...getRequestMeta(req) });
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     componentLogger.error('Logout failed', { error: error.message });
@@ -181,6 +286,17 @@ async function sendMagicLink(req, res) {
       });
     }
 
+    const limiter = getMagicLinkLimiter();
+    if (limiter) {
+      const { allowed } = await limiter.canResend(email.toLowerCase());
+      if (!allowed) {
+        return res.status(429).json({
+          error: 'RATE_LIMIT_EXCEEDED',
+          message: 'Too many magic link requests. Try again tomorrow.',
+        });
+      }
+    }
+
     const { url, email: normalizedEmail } = await generateMagicLink(email);
 
     try {
@@ -189,12 +305,17 @@ async function sendMagicLink(req, res) {
       componentLogger.warn('Email send failed, magic link available in logs', { email: normalizedEmail });
     }
 
+    if (limiter) {
+      await limiter.recordResend(normalizedEmail);
+    }
+
     const isDev = config.get('NODE_ENV') === 'development';
     const response = { message: 'Magic link sent', email: normalizedEmail };
     if (isDev) {
       response.devUrl = url;
     }
 
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.MAGIC_LINK_SENT, { email: normalizedEmail, ...getRequestMeta(req) });
     res.json(response);
   } catch (error) {
     componentLogger.error('Failed to send magic link', { error: error.message });
@@ -222,8 +343,12 @@ async function verifyMagicToken(req, res) {
     }
 
     const result = await authService.issueTokensForUser(user);
+    const meta = getRequestMeta(req);
     componentLogger.info('User signed in via magic link', { email: user.email });
-    res.json(result);
+    await sessionService.createSession(result.user.id, hashToken(result.refreshToken), meta);
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.MAGIC_LINK_VERIFIED, { userId: result.user.id, email: user.email, ...meta });
+    setRefreshTokenCookie(res, result.refreshToken);
+    res.json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Magic link verification failed', { error: error.message });
     res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Verification failed' });
@@ -247,6 +372,7 @@ async function changePassword(req, res) {
 
     await authService.changePassword(req.user.id, currentPassword, newPassword);
     componentLogger.info('Password changed', { userId: req.user.id });
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.PASSWORD_CHANGE, { userId: req.user.id, ...getRequestMeta(req) });
     res.json({ message: 'Password changed successfully' });
   } catch (error) {
     if (error.code === 'WRONG_PASSWORD') {
@@ -263,6 +389,126 @@ async function changePassword(req, res) {
   }
 }
 
+async function listSessions(req, res) {
+  try {
+    const sessions = await sessionService.getActiveSessions(req.user.id);
+    const currentTokenHash = req.cookies?.piece_rt ? hashToken(req.cookies.piece_rt) : null;
+
+    const data = sessions.map((s) => ({
+      ...s,
+      isCurrent: s.refreshTokenHash === currentTokenHash || false,
+    }));
+
+    res.json({ data });
+  } catch (error) {
+    componentLogger.error('Failed to list sessions', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list sessions' });
+  }
+}
+
+async function revokeSession(req, res) {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Session ID is required' });
+    }
+
+    const revoked = await sessionService.revokeSession(req.user.id, sessionId);
+    if (!revoked) {
+      return res.status(404).json({ error: 'NOT_FOUND', message: 'Session not found' });
+    }
+
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.SESSION_REVOKED, { userId: req.user.id, sessionId, ...getRequestMeta(req) });
+    res.json({ message: 'Session revoked' });
+  } catch (error) {
+    componentLogger.error('Failed to revoke session', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to revoke session' });
+  }
+}
+
+async function revokeAllOtherSessions(req, res) {
+  try {
+    const currentTokenHash = req.cookies?.piece_rt ? hashToken(req.cookies.piece_rt) : null;
+    const count = await sessionService.revokeAllSessions(req.user.id, currentTokenHash);
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.ALL_SESSIONS_REVOKED, { userId: req.user.id, ...getRequestMeta(req) });
+    res.json({ message: 'All other sessions revoked', affected: count });
+  } catch (error) {
+    componentLogger.error('Failed to revoke all sessions', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to revoke sessions' });
+  }
+}
+
+async function getAuditLog(req, res) {
+  try {
+    const { getGlobalSystemCollection } = await import('@piece/multitenancy');
+    const { mongoIdUtils } = await import('@piece/validation/mongo');
+    const collection = getGlobalSystemCollection('auth_audit_log');
+
+    const { userId, event, limit = 50, offset = 0 } = req.query;
+    const filter = {};
+    if (userId) filter.userId = mongoIdUtils.toObjectId(userId);
+    if (event) filter.event = event;
+
+    const parsedLimit = Math.min(Number(limit) || 50, 200);
+    const parsedOffset = Number(offset) || 0;
+
+    const [data, total] = await Promise.all([
+      collection.find(filter).sort({ createdAt: -1 }).skip(parsedOffset).limit(parsedLimit).toArray(),
+      collection.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: data.map((d) => ({
+        id: mongoIdUtils.toApiString(d._id),
+        event: d.event,
+        userId: d.userId ? mongoIdUtils.toApiString(d.userId) : null,
+        email: d.email,
+        metadata: d.metadata,
+        createdAt: d.createdAt,
+      })),
+      pagination: { total, limit: parsedLimit, offset: parsedOffset, hasMore: parsedOffset + parsedLimit < total },
+    });
+  } catch (error) {
+    componentLogger.error('Failed to get audit log', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get audit log' });
+  }
+}
+
+async function getUserAuditLog(req, res) {
+  try {
+    const { getGlobalSystemCollection } = await import('@piece/multitenancy');
+    const { mongoIdUtils } = await import('@piece/validation/mongo');
+    const collection = getGlobalSystemCollection('auth_audit_log');
+
+    const { userId } = req.params;
+    const { limit = 50, offset = 0 } = req.query;
+    const parsedLimit = Math.min(Number(limit) || 50, 200);
+    const parsedOffset = Number(offset) || 0;
+
+    const filter = { userId: mongoIdUtils.toObjectId(userId) };
+    const [data, total] = await Promise.all([
+      collection.find(filter).sort({ createdAt: -1 }).skip(parsedOffset).limit(parsedLimit).toArray(),
+      collection.countDocuments(filter),
+    ]);
+
+    res.json({
+      data: data.map((d) => ({
+        id: mongoIdUtils.toApiString(d._id),
+        event: d.event,
+        userId: mongoIdUtils.toApiString(d.userId),
+        email: d.email,
+        metadata: d.metadata,
+        createdAt: d.createdAt,
+      })),
+      pagination: { total, limit: parsedLimit, offset: parsedOffset, hasMore: parsedOffset + parsedLimit < total },
+    });
+  } catch (error) {
+    componentLogger.error('Failed to get user audit log', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get audit log' });
+  }
+}
+
 export const authController = {
   register,
   login,
@@ -272,4 +518,9 @@ export const authController = {
   logout,
   me,
   changePassword,
+  listSessions,
+  revokeSession,
+  revokeAllOtherSessions,
+  getAuditLog,
+  getUserAuditLog,
 };

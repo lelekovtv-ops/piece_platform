@@ -1,6 +1,6 @@
 import { getAccessToken, setAccessToken, refreshApi } from "./auth-client"
+import { API_BASE } from "@/lib/api/endpoints"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4030"
 const MAX_RETRIES = 2
 const REQUEST_TIMEOUT_MS = 15_000
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503])

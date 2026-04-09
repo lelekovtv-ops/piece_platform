@@ -15,9 +15,13 @@
     "infra:stop": "docker compose down"
   },
   "devDependencies": {
-    "nx": "^21.0.0",
     "concurrently": "^8.0.0",
-    "vitest": "^3.0.0",
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "nx": "^21.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "ua-parser-js": "^2.0.9"
   }
 }

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { getGlobalSystemCollection } from '@piece/multitenancy';
@@ -10,6 +11,11 @@ const componentLogger = createComponentLogger('AuthService');
 
 const BCRYPT_ROUNDS = 12;
 const PASSWORD_MIN_LENGTH = 8;
+const REFRESH_TOKEN_GRACE_PERIOD_MS = 30_000;
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 function getUsersCollection() {
   return getGlobalSystemCollection('users');
@@ -32,7 +38,8 @@ function getPrivateKey() {
 }
 
 function signAccessToken(payload) {
-  return jwt.sign(payload, getPrivateKey(), {
+  const jti = crypto.randomUUID();
+  return jwt.sign({ ...payload, jti }, getPrivateKey(), {
     algorithm: 'RS256',
     expiresIn: config.get('JWT_EXPIRES_IN'),
   });
@@ -101,7 +108,7 @@ async function register({ email, password, name }) {
 
   await getRefreshTokensCollection().insertOne({
     userId: result.insertedId,
-    token: refreshToken,
+    tokenHash: hashToken(refreshToken),
     createdAt: now,
     expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
   });
@@ -149,7 +156,7 @@ async function login({ email, password }) {
 
   await refreshTokens.insertOne({
     userId: user._id,
-    token: refreshToken,
+    tokenHash: hashToken(refreshToken),
     createdAt: now,
     expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
   });
@@ -173,26 +180,39 @@ async function refreshAccessToken(token) {
 
   if (decoded.type !== 'refresh') return null;
 
-  const stored = await getRefreshTokensCollection().findOne({ token });
-  if (!stored) return null;
+  const tokenHash = hashToken(token);
+  const refreshTokens = getRefreshTokensCollection();
+
+  const stored = await refreshTokens.findOne({ tokenHash });
+  if (!stored) {
+    const replaced = await refreshTokens.findOne({
+      replacedHash: tokenHash,
+      replacedAt: { $gte: new Date(Date.now() - REFRESH_TOKEN_GRACE_PERIOD_MS) },
+    });
+    if (replaced) {
+      const users = getUsersCollection();
+      const user = await users.findOne({ _id: replaced.userId });
+      if (!user) return null;
+      return { accessToken: signAccessToken({ sub: mongoIdUtils.toApiString(user._id), email: user.email }), refreshToken: token };
+    }
+    return null;
+  }
 
   const users = getUsersCollection();
   const user = await users.findOne({ _id: mongoIdUtils.toObjectId(decoded.sub) });
   if (!user) return null;
-
-  await getRefreshTokensCollection().deleteOne({ token });
 
   const userId = mongoIdUtils.toApiString(user._id);
   const accessToken = signAccessToken({ sub: userId, email: user.email });
   const newRefreshToken = signRefreshToken({ sub: userId, type: 'refresh' });
 
   const now = new Date();
-  await getRefreshTokensCollection().insertOne({
-    userId: user._id,
-    token: newRefreshToken,
-    createdAt: now,
-    expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-  });
+  const newTokenHash = hashToken(newRefreshToken);
+
+  await refreshTokens.updateOne(
+    { tokenHash },
+    { $set: { tokenHash: newTokenHash, replacedHash: tokenHash, replacedAt: now, createdAt: now, expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) } },
+  );
 
   return { accessToken, refreshToken: newRefreshToken };
 }
@@ -205,7 +225,7 @@ async function issueTokensForUser(user) {
   const now = new Date();
   await getRefreshTokensCollection().insertOne({
     userId: user._id,
-    token: refreshToken,
+    tokenHash: hashToken(refreshToken),
     createdAt: now,
     expiresAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
   });
@@ -219,7 +239,7 @@ async function issueTokensForUser(user) {
 
 async function logout(refreshToken) {
   if (refreshToken) {
-    await getRefreshTokensCollection().deleteOne({ token: refreshToken });
+    await getRefreshTokensCollection().deleteOne({ tokenHash: hashToken(refreshToken) });
   }
 }
 

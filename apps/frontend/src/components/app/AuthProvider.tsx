@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { useCollaboration } from "@/hooks/useCollaboration"
 import { useAuthStore } from "@/lib/auth/auth-store"
 
-const PUBLIC_ROUTES = ["/login", "/healthz"]
+const PUBLIC_ROUTES = ["/login", "/healthz", "/home", "/"]
 
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (isAuthenticated && pathname === "/login") {
-      router.replace("/")
+      router.replace("/projects")
     }
   }, [isLoading, isAuthenticated, pathname, router])
 

@@ -1,8 +1,7 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4030"
+import { API_BASE } from "@/lib/api/endpoints"
 
 export interface AuthTokens {
   accessToken: string
-  refreshToken: string
 }
 
 export interface AuthUser {
@@ -15,7 +14,6 @@ export interface AuthUser {
 interface AuthResponse {
   user: AuthUser
   accessToken: string
-  refreshToken: string
 }
 
 let accessToken: string | null = null
@@ -28,17 +26,6 @@ export function setAccessToken(token: string | null) {
   accessToken = token
 }
 
-export function getRefreshToken(): string | null {
-  if (typeof window === "undefined") return null
-  return localStorage.getItem("piece-refresh-token")
-}
-
-export function setRefreshToken(token: string | null) {
-  if (typeof window === "undefined") return
-  if (token) localStorage.setItem("piece-refresh-token", token)
-  else localStorage.removeItem("piece-refresh-token")
-}
-
 export async function loginApi(
   email: string,
   password: string,
@@ -47,6 +34,7 @@ export async function loginApi(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
+    credentials: "include",
   })
   if (!res.ok) {
     const d = await res.json().catch(() => ({}))
@@ -64,6 +52,7 @@ export async function registerApi(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password, name }),
+    credentials: "include",
   })
   if (!res.ok) {
     const d = await res.json().catch(() => ({}))
@@ -72,35 +61,38 @@ export async function registerApi(
   return res.json()
 }
 
+let refreshPromise: Promise<{ accessToken: string } | null> | null = null
+
 export async function refreshApi(): Promise<{ accessToken: string } | null> {
-  const rt = getRefreshToken()
-  if (!rt) return null
-  const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken: rt }),
-  })
-  if (!res.ok) {
-    setRefreshToken(null)
-    return null
-  }
-  return res.json()
+  if (refreshPromise) return refreshPromise
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      })
+      if (!res.ok) return null
+      return res.json()
+    } finally {
+      refreshPromise = null
+    }
+  })()
+
+  return refreshPromise
 }
 
 export async function logoutApi(): Promise<void> {
-  const rt = getRefreshToken()
-  if (rt) {
-    await fetch(`${API_BASE}/v1/auth/logout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ refreshToken: rt }),
-    }).catch(() => {})
-  }
+  await fetch(`${API_BASE}/v1/auth/logout`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    credentials: "include",
+  }).catch(() => {})
   setAccessToken(null)
-  setRefreshToken(null)
 }
 
 export async function getMeApi(): Promise<AuthUser | null> {

@@ -227,10 +227,9 @@ describe('AuthService', () => {
   describe('refreshAccessToken', () => {
     it('should return new tokens with valid refresh token', async () => {
       mockCollection.findOne
-        .mockResolvedValueOnce({ token: 'valid-token' })
+        .mockResolvedValueOnce({ tokenHash: 'hashed-token', userId: 'user-id' })
         .mockResolvedValueOnce({ _id: 'user-id', email: 'test@example.com' });
-      mockCollection.deleteOne.mockResolvedValueOnce({ deletedCount: 1 });
-      mockCollection.insertOne.mockResolvedValueOnce({ insertedId: 'new-token-id' });
+      mockCollection.updateOne = vi.fn().mockResolvedValueOnce({ modifiedCount: 1 });
 
       const result = await authService.refreshAccessToken('valid-token');
 
@@ -256,7 +255,9 @@ describe('AuthService', () => {
 
       await authService.logout('some-refresh-token');
 
-      expect(mockCollection.deleteOne).toHaveBeenCalledWith({ token: 'some-refresh-token' });
+      expect(mockCollection.deleteOne).toHaveBeenCalledWith(
+        expect.objectContaining({ tokenHash: expect.any(String) }),
+      );
     });
 
     it('should handle null refresh token', async () => {

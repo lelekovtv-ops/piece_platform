@@ -6,14 +6,10 @@ import {
   logoutApi,
   getMeApi,
   setAccessToken,
-  setRefreshToken,
-  getRefreshToken,
   type AuthUser,
 } from "./auth-client"
 import { authFetch, setCurrentTeamId } from "./auth-fetch"
 import { identifyUser, resetAnalytics } from "@/lib/analytics"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4030"
 
 interface AuthState {
   user: AuthUser | null
@@ -33,10 +29,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: async () => {
     set({ isLoading: true })
     try {
-      if (!getRefreshToken()) {
-        set({ isLoading: false })
-        return
-      }
       const result = await refreshApi()
       if (!result) {
         set({ isLoading: false })
@@ -59,7 +51,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   login: async (email: string, password: string) => {
     const data = await loginApi(email, password)
     setAccessToken(data.accessToken)
-    setRefreshToken(data.refreshToken)
     await selectFirstTeam()
     identifyUser(data.user.id, { email: data.user.email, name: data.user.name })
     set({ user: data.user, isAuthenticated: true })
@@ -68,7 +59,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   register: async (email: string, password: string, name?: string) => {
     const data = await registerApi(email, password, name)
     setAccessToken(data.accessToken)
-    setRefreshToken(data.refreshToken)
     await selectFirstTeam()
     identifyUser(data.user.id, { email: data.user.email, name: data.user.name })
     set({ user: data.user, isAuthenticated: true })

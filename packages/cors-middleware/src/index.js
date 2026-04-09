@@ -15,32 +15,31 @@ const EXPOSED_HEADERS = [
   'X-RateLimit-Reset',
 ];
 
-// TODO: Update production/staging origins when domain is configured
+function parseOriginsFromEnv(envVar) {
+  const raw = process.env[envVar];
+  if (!raw) return [];
+  return raw.split(',').map((o) => o.trim()).filter(Boolean);
+}
+
 const ORIGINS_BY_ENV = {
-  production: [
-    'https://app.localhost',
-    'https://localhost',
-  ],
-  staging: [
-    'https://staging-app.localhost',
-    'https://staging.localhost',
-  ],
   development: [
     'http://localhost:4030',
     'http://localhost:5200',
+    'http://localhost:5201',
     /^http:\/\/localhost:\d+$/,
   ],
 };
 
 function resolveOrigins() {
   const env = process.env.NODE_ENV || 'development';
+  const envOrigins = parseOriginsFromEnv('CORS_ORIGINS');
 
-  if (env === 'production') {
-    return ORIGINS_BY_ENV.production;
+  if (envOrigins.length > 0) {
+    return envOrigins;
   }
 
-  if (env === 'staging') {
-    return [...ORIGINS_BY_ENV.staging, ...ORIGINS_BY_ENV.development];
+  if (env === 'production' || env === 'staging') {
+    return [];
   }
 
   return ORIGINS_BY_ENV.development;

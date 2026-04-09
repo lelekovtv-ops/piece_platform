@@ -65,10 +65,10 @@ describe('initializeSystemIndexes', () => {
     expect(collectionNames).toContain('refresh_tokens');
   });
 
-  it('should create token index on refresh_tokens', async () => {
+  it('should create tokenHash index on refresh_tokens', async () => {
     await initializeSystemIndexes();
 
-    expect(mockCreateIndex).toHaveBeenCalledWith({ token: 1 });
+    expect(mockCreateIndex).toHaveBeenCalledWith({ tokenHash: 1 });
   });
 
   it('should create userId index on refresh_tokens', async () => {

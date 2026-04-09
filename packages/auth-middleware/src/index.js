@@ -1,11 +1,17 @@
 import jwt from 'jsonwebtoken';
 import { timingSafeEqual } from 'node:crypto';
 
-export function createAuthMiddleware({ config }) {
+export function createAuthMiddleware({ config, tokenBlacklist } = {}) {
   const publicKeyBase64 = config.get('JWT_PUBLIC_KEY_BASE64');
   const publicKey = Buffer.from(publicKeyBase64, 'base64').toString('utf8');
 
-  function authenticateToken(req, res, next) {
+  let _blacklist = tokenBlacklist || null;
+
+  function setTokenBlacklist(bl) {
+    _blacklist = bl;
+  }
+
+  async function authenticateToken(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -19,6 +25,16 @@ export function createAuthMiddleware({ config }) {
 
     try {
       const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+
+      if (_blacklist && decoded.jti) {
+        const blacklisted = await _blacklist.isBlacklisted(decoded.jti);
+        if (blacklisted) {
+          return res.status(401).json({
+            error: 'TOKEN_REVOKED',
+            message: 'Access token has been revoked',
+          });
+        }
+      }
 
       req.user = {
         id: decoded.sub || decoded.id,
@@ -108,5 +124,5 @@ export function createAuthMiddleware({ config }) {
     }
   }
 
-  return { authenticateToken, authenticateInternalToken, optionalAuth, verifyToken };
+  return { authenticateToken, authenticateInternalToken, optionalAuth, verifyToken, setTokenBlacklist };
 }

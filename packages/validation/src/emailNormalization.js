@@ -35,7 +35,7 @@ export function normalizeEmail(email) {
     local = local.replace(/\./g, '');
   }
 
-  return `${local}@$localhost`;
+  return `${local}@${domain}`;
 }
 
 /**

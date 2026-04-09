@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.js",
     "./accountLockout": "./src/accountLockout.js",
-    "./resendLimiter": "./src/resendLimiter.js"
+    "./resendLimiter": "./src/resendLimiter.js",
+    "./tokenBlacklist": "./src/tokenBlacklist.js"
   },
   "dependencies": {
     "ioredis": "^5.4.0"

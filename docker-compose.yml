@@ -266,7 +266,7 @@ services:
     environment:
       <<: *common-env
       PORT: 3109
-      WS_CORS_ORIGINS: ${WS_CORS_ORIGINS:-*}
+      WS_CORS_ORIGINS: ${WS_CORS_ORIGINS:-http://localhost:5201}
     depends_on:
       <<: *infra-depends
     deploy:

@@ -1,56 +1,102 @@
 /**
  * useCollaboration — connects WS client to auth store and project.
  * Mount at layout level. Handles connect/disconnect lifecycle.
+ * Handles token expiration and automatic reconnection.
  */
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useCallback } from "react"
 import { useAuthStore } from "@/lib/auth/auth-store"
-import { getAccessToken } from "@/lib/auth/auth-client"
+import { getAccessToken, refreshApi, setAccessToken } from "@/lib/auth/auth-client"
 import { getWSClient } from "@/lib/ws/client"
 import { handleServerMessage } from "@/lib/ws/opApplier"
 import { useCollaborationStore } from "@/store/collaboration"
 import { useProjectsStore } from "@/store/projects"
+
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000]
 
 export function useCollaboration() {
   const { user, isAuthenticated } = useAuthStore()
   const activeProjectId = useProjectsStore((s) => s.activeProjectId)
   const setConnectionState = useCollaborationStore((s) => s.setConnectionState)
   const unsubRef = useRef<(() => void) | null>(null)
+  const reconnectAttemptRef = useRef(0)
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Connect when authenticated
+  const reconnect = useCallback(async () => {
+    const result = await refreshApi()
+    if (!result) return
+
+    setAccessToken(result.accessToken)
+    const client = getWSClient()
+    client.connect(result.accessToken)
+    reconnectAttemptRef.current = 0
+  }, [])
+
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) return
+    const attempt = reconnectAttemptRef.current
+    const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)]
+    reconnectAttemptRef.current = attempt + 1
+
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null
+      reconnect()
+    }, delay)
+  }, [reconnect])
+
   useEffect(() => {
     if (!isAuthenticated || !user) return
 
     const client = getWSClient()
 
-    // Subscribe to messages
     if (!unsubRef.current) {
       unsubRef.current = client.onMessage((msg) => {
         handleServerMessage(msg)
 
-        // Track connection state
         if (msg.type === "auth:ok") {
           setConnectionState(true, true)
+          reconnectAttemptRef.current = 0
           client.flushQueue()
         }
         if (msg.type === "auth:error") {
           setConnectionState(true, false)
         }
+        if (msg.type === "token_expired") {
+          setConnectionState(false, false)
+          scheduleReconnect()
+        }
       })
     }
 
-    // Get JWT token for WS auth
+    const onDisconnect = () => {
+      setConnectionState(false, false)
+      if (isAuthenticated) {
+        scheduleReconnect()
+      }
+    }
+
+    const rawSocket = client.getSocket?.()
+    if (rawSocket) {
+      rawSocket.on("disconnect", onDisconnect)
+      rawSocket.on("token_expired", () => {
+        setConnectionState(false, false)
+        scheduleReconnect()
+      })
+    }
+
     const token = getAccessToken()
     if (token) {
       client.connect(token)
     }
 
     return () => {
-      // Don't disconnect on every re-render — only on unmount
+      if (rawSocket) {
+        rawSocket.off("disconnect", onDisconnect)
+        rawSocket.off("token_expired")
+      }
     }
-  }, [isAuthenticated, user, setConnectionState])
+  }, [isAuthenticated, user, setConnectionState, scheduleReconnect])
 
-  // Join/leave project
   useEffect(() => {
     if (!isAuthenticated) return
 
@@ -62,12 +108,15 @@ export function useCollaboration() {
     }
   }, [activeProjectId, isAuthenticated])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (unsubRef.current) {
         unsubRef.current()
         unsubRef.current = null
+      }
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current)
+        reconnectTimerRef.current = null
       }
       getWSClient().disconnect()
       setConnectionState(false, false)

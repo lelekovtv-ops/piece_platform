@@ -3,9 +3,10 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 vi.mock('@piece/multitenancy', () => {
   const mockCollection = {
     findOne: vi.fn(),
-    insertOne: vi.fn(),
-    deleteOne: vi.fn(),
-    deleteMany: vi.fn(),
+    insertOne: vi.fn().mockResolvedValue({ insertedId: 'mock-id' }),
+    deleteOne: vi.fn().mockResolvedValue({ deletedCount: 1 }),
+    deleteMany: vi.fn().mockResolvedValue({ deletedCount: 0 }),
+    updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
   };
   return {
     getGlobalSystemCollection: vi.fn(() => mockCollection),
@@ -26,8 +27,19 @@ vi.mock('@piece/validation/email', () => ({
   validateMxRecord: vi.fn().mockResolvedValue(true),
 }));
 
+const mockRedis = {
+  pipeline: vi.fn(() => ({
+    zadd: vi.fn().mockReturnThis(),
+    zremrangebyscore: vi.fn().mockReturnThis(),
+    zrangebyscore: vi.fn().mockReturnThis(),
+    expire: vi.fn().mockReturnThis(),
+    exec: vi.fn().mockResolvedValue([[null, 0], [null, 1], [null, []], [null, 1]]),
+  })),
+  del: vi.fn().mockResolvedValue(1),
+};
+
 vi.mock('@piece/cache', () => ({
-  getRedisClient: vi.fn(() => ({})),
+  getRedisClient: vi.fn(() => mockRedis),
   createCache: vi.fn(() => ({
     get: vi.fn(),
     set: vi.fn(),
@@ -44,6 +56,13 @@ const mockLockout = {
 
 vi.mock('@piece/cache/accountLockout', () => ({
   createAccountLockout: vi.fn(() => mockLockout),
+}));
+
+vi.mock('@piece/cache/resendLimiter', () => ({
+  createResendLimiter: vi.fn(() => ({
+    canResend: vi.fn().mockResolvedValue({ allowed: true }),
+    recordResend: vi.fn().mockResolvedValue(undefined),
+  })),
 }));
 
 vi.mock('../../../utils/logger.js', () => ({

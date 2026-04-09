@@ -13,6 +13,7 @@ if (sentryDsn) {
 import { logger, createComponentLogger } from './utils/logger.js';
 import { createRequestLoggingMiddleware } from '@piece/logger';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { corsMiddleware } from '@piece/cors-middleware';
 import { createAuthMiddleware } from '@piece/auth-middleware';
@@ -36,12 +37,15 @@ import { buildPrometheusMetrics } from './middleware/prometheus-metrics.js';
 
 const componentLogger = createComponentLogger('Application');
 
+let _authMiddleware = null;
+
 const setupApp = () => {
   const app = express();
   const PORT = config.get('PORT');
 
   app.use(helmet());
   app.use(corsMiddleware);
+  app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
   app.use(createRequestLoggingMiddleware(logger));
   app.use(createRateLimiter({ maxRequests: 100, windowSeconds: 60 }));
@@ -109,6 +113,15 @@ const setupApp = () => {
     res.send(buildPrometheusMetrics());
   });
 
+  app.use((req, res, next) => {
+    if (backgroundServicesReady) return next();
+    if (req.path === '/health' || req.path.startsWith('/internal/metrics')) return next();
+    res.status(503).json({
+      error: 'SERVICE_UNAVAILABLE',
+      message: 'Service is starting up, please retry',
+    });
+  });
+
   app.setBackgroundServicesReady = (ready) => {
     backgroundServicesReady = ready;
   };
@@ -117,8 +130,21 @@ const setupApp = () => {
   const jwtPublicKey = config.get('JWT_PUBLIC_KEY_BASE64');
   if (jwtPublicKey) {
     authMiddleware = createAuthMiddleware({ config });
+    _authMiddleware = authMiddleware;
+  } else if (config.get('NODE_ENV') === 'production') {
+    componentLogger.error('JWT_PUBLIC_KEY_BASE64 is required in production');
+    process.exit(1);
   } else {
-    componentLogger.warn('JWT keys not configured — authenticated routes disabled');
+    componentLogger.warn('JWT keys not configured — authenticated routes will reject all requests');
+    const rejectAuth = (req, res) => {
+      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication not configured' });
+    };
+    authMiddleware = {
+      authenticateToken: rejectAuth,
+      requireEmailVerification: rejectAuth,
+      authenticateInternalToken: rejectAuth,
+      optionalAuth: (req, res, next) => next(),
+    };
   }
 
   registerAuthRoutes(app, authMiddleware);
@@ -169,6 +195,14 @@ const initializeBackgroundServices = async () => {
   try {
     await initializeServiceCache('piece', config, { strategy: 'redis' });
     componentLogger.info('Redis cache initialized');
+
+    const { getRedisClient } = await import('@piece/cache');
+    const { createTokenBlacklist } = await import('@piece/cache/tokenBlacklist');
+    const redis = getRedisClient();
+    if (redis && _authMiddleware?.setTokenBlacklist) {
+      _authMiddleware.setTokenBlacklist(createTokenBlacklist(redis));
+      componentLogger.info('Token blacklist initialized');
+    }
   } catch (err) {
     componentLogger.warn('Redis cache init failed (non-critical)', { error: err.message });
   }
@@ -178,6 +212,13 @@ const initializeBackgroundServices = async () => {
     componentLogger.info('NATS PubSub initialized');
   } catch (err) {
     componentLogger.warn('NATS PubSub init failed (non-critical)', { error: err.message });
+  }
+
+  try {
+    const { startSessionCleanup } = await import('./jobs/cleanup-sessions.js');
+    startSessionCleanup();
+  } catch (err) {
+    componentLogger.warn('Session cleanup job failed to start', { error: err.message });
   }
 };
 

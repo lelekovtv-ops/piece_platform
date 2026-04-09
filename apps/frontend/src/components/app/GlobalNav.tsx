@@ -148,7 +148,7 @@ function GlobalNavInner() {
   const focusMode = useScreenplaySettings((s) => s.focusMode)
   const s = THEME_STYLES[theme]
 
-  if (focusMode) return null
+  if (focusMode || pathname === "/home" || pathname === "/login") return null
 
   return (
     <nav
@@ -161,7 +161,7 @@ function GlobalNavInner() {
       }}
     >
       {/* Logo */}
-      <Link href="/projects" className="flex items-center pl-6 pr-5">
+      <Link href="/home" className="flex items-center pl-6 pr-5">
         <span
           className="text-[10px] font-bold tracking-[0.45em] transition-colors duration-300"
           style={{
