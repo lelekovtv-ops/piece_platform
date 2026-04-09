@@ -9,7 +9,7 @@
     "start": "next start -p 5201",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint --max-warnings 999"
+    "lint": "eslint --quiet"
   },
   "dependencies": {
     "@infinite-canvas-tutorial/sam": "^0.0.8",
