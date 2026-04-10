@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ':*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{time_total}s\" https://sjinn.ai)",
+      "Bash(curl -s -X POST http://localhost:4030/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"alelekov@bk.ru\",\"password\":\"12345678\"}')",
+      "Bash(curl -s -X OPTIONS http://localhost:4030/v1/auth/login -H 'Origin: http://localhost:5201' -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' -D - -o /dev/null)",
+      "Bash(find /Users/macbookbpm/Desktop/piece -name \"package.json\" -exec grep -l \"\\\\\"ai\\\\\":\" {} \\\\;)",
+      "Bash(pnpm --filter @piece/piece add ai @ai-sdk/openai @ai-sdk/anthropic)",
+      "WebSearch",
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(pnpm dev:backend)"
+    ]
+  }
+}
