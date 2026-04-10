@@ -1,4 +1,4 @@
-FROM koza-studio-base:latest
+FROM piece-base:latest
 
 ARG SERVICE_NAME
 ARG PORT=3101

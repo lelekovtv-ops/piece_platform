@@ -250,7 +250,7 @@ export const useRundownStore = create<RundownState>()(
       },
     }),
     {
-      name: "koza-rundown-store",
+      name: "piece-rundown-store",
       storage: safeStorage,
       partialize: (state) => ({
         entries: state.entries,

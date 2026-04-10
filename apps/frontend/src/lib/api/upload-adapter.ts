@@ -2,9 +2,9 @@ import { authFetch } from "@/lib/auth/auth-fetch"
 import { ENDPOINTS } from "./endpoints"
 
 /**
- * Adapts KOZA's single-call upload pattern to piece backend's presign+complete flow.
+ * Adapts Piece's single-call upload pattern to piece backend's presign+complete flow.
  *
- * KOZA: apiGptImage("/api/upload", { body: { projectId, filename, contentType } })
+ * Piece: apiGptImage("/api/upload", { body: { projectId, filename, contentType } })
  *       -> { uploadUrl, publicUrl, key }
  *
  * Piece: POST /v1/upload/presign -> { presignedUrl, key }

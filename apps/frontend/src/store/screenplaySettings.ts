@@ -68,7 +68,7 @@ export const useScreenplaySettings = create<ScreenplaySettingsState>()(
       setIdleFade: (idle) => set({ idleFade: idle }),
     }),
     {
-      name: "koza-screenplay-settings",
+      name: "piece-screenplay-settings",
       storage: safeStorage,
       partialize: (s) => ({
         bibleMarkers: s.bibleMarkers,

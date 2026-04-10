@@ -26,12 +26,12 @@ describe("SmartImage", () => {
   it("should render an img tag with correct src", async () => {
     const html = await render(
       React.createElement(SmartImage, {
-        src: "/img/abc/fill/200x200/koza-uploads/test.jpg",
+        src: "/img/abc/fill/200x200/piece-uploads/test.jpg",
         alt: "test",
         fill: true,
       })
     )
-    expect(html).toContain("/img/abc/fill/200x200/koza-uploads/test.jpg")
+    expect(html).toContain("/img/abc/fill/200x200/piece-uploads/test.jpg")
     expect(html).toContain('alt="test"')
   })
 

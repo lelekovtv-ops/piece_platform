@@ -1,5 +1,5 @@
 /**
- * WebSocket client for KOZA collaborative editing.
+ * WebSocket client for PIECE collaborative editing.
  * Handles connection, reconnection, auth, and message routing.
  */
 
@@ -13,7 +13,7 @@ const HEARTBEAT_INTERVAL = 30_000
 const MAX_OFFLINE_QUEUE_SIZE = 1000
 const MAX_PENDING_OPS = 500
 
-export class KozaWSClient {
+export class PieceWSClient {
   private ws: WebSocket | null = null
   private url: string
   private token: string | null = null
@@ -297,11 +297,11 @@ export class KozaWSClient {
 
 // ── Singleton ──
 
-let instance: KozaWSClient | null = null
+let instance: PieceWSClient | null = null
 
-export function getWSClient(): KozaWSClient {
+export function getWSClient(): PieceWSClient {
   if (!instance) {
-    instance = new KozaWSClient()
+    instance = new PieceWSClient()
   }
   return instance
 }

@@ -114,7 +114,7 @@ export const useBreakdownConfigStore = create<BreakdownConfigState>()(
       setActivePipelinePreset: (preset) => set({ activePipelinePreset: preset }),
     }),
     {
-      name: "koza-breakdown-config-v2",
+      name: "piece-breakdown-config-v2",
       storage: safeStorage,
     },
   ),

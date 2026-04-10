@@ -70,7 +70,7 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/api
           WS_CORS_ORIGINS=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}
           FRONTEND_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}
-          S3_PUBLIC_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/storage/koza-uploads
+          S3_PUBLIC_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/storage/piece-uploads
           IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
           GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           STAGING_GATE_TOKEN=${{ secrets.STAGING_GATE_TOKEN }}
@@ -122,7 +122,7 @@ jobs:
             sleep 10
 
             # Build backend base image (--no-cache ensures code fixes are included)
-            docker build --no-cache -f docker/Dockerfile.base -t koza-studio-base:latest .
+            docker build --no-cache -f docker/Dockerfile.base -t piece-base:latest .
 
             # Build and recreate only application containers (not infrastructure)
             docker compose build --parallel api-gateway websocket-gateway platform

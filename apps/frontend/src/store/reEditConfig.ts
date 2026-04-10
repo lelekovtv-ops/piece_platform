@@ -41,7 +41,7 @@ export const useReEditConfigStore = create<ReEditConfigState>()(
       resetConfig: () =>
         set({ config: { ...DEFAULT_RE_EDIT_CONFIG } }),
     }),
-    { name: "koza-reedit-config-v1", storage: safeStorage },
+    { name: "piece-reedit-config-v1", storage: safeStorage },
   ),
 )
 

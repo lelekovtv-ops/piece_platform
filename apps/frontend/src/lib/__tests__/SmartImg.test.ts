@@ -54,7 +54,7 @@ describe("SmartImg", () => {
   it("should forward className", async () => {
     const html = await render(
       React.createElement(SmartImg, {
-        src: "/storage/koza-uploads/test.jpg",
+        src: "/storage/piece-uploads/test.jpg",
         alt: "test",
         className: "h-full w-full object-cover",
       })

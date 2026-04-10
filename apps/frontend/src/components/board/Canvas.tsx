@@ -26,7 +26,7 @@ import TextBlockNode from './nodes/TextBlockNode'
 import ImageCardNode from './nodes/ImageCardNode'
 import BoardToolbar, { type BoardTool } from './BoardToolbar'
 import ScriptWriterOverlay from '@/components/editor/ScriptWriterOverlay'
-import { KozaLogo } from "@/components/ui/KozaLogo";
+import { PieceLogo } from "@/components/ui/PieceLogo";
 import { useProjectsStore } from '@/store/projects'
 import { useScriptStore } from '@/store/script'
 import { useTimelineStore } from '@/store/timeline'
@@ -273,7 +273,7 @@ export default function Canvas({ onBack }: CanvasProps) {
         </ReactFlow>
       </div>
       <div className="absolute top-4 left-4 z-50">
-        <KozaLogo size="md" variant="default" className="text-[#2D2A26]" />
+        <PieceLogo size="md" variant="default" className="text-[#2D2A26]" />
       </div>
       {!editorMode.active && <LibraryButton />}
       <LibraryPanel projectId={activeProjectId} hidden={editorMode.active} />

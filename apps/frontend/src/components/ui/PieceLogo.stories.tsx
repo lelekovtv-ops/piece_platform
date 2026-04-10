@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from "@storybook/react"
-import { KozaLogo } from "./KozaLogo"
+import { PieceLogo } from "./PieceLogo"
 
 const meta = {
-  title: "UI/KozaLogo",
-  component: KozaLogo,
+  title: "UI/PieceLogo",
+  component: PieceLogo,
   argTypes: {
     size: { control: "select", options: ["sm", "md", "lg"] },
     variant: { control: "select", options: ["default", "terminal"] },
     showTagline: { control: "boolean" },
   },
-} satisfies Meta<typeof KozaLogo>
+} satisfies Meta<typeof PieceLogo>
 
 export default meta
 type Story = StoryObj<typeof meta>

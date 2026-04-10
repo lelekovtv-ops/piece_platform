@@ -1,16 +1,16 @@
-import { createHmac } from 'node:crypto';
-import { config } from '../config.js';
+import { createHmac } from "node:crypto";
+import { config } from "../config.js";
 
 function getSecret() {
-  return config.get('IMAGOR_SECRET') || '';
+  return config.get("IMAGOR_SECRET") || "";
 }
 
 function getBaseUrl() {
-  return config.get('IMAGOR_BASE_URL') || '/img';
+  return config.get("IMAGOR_BASE_URL") || "/img";
 }
 
 function getBucket() {
-  return config.get('S3_BUCKET') || 'koza-uploads';
+  return config.get("S3_BUCKET") || "piece-uploads";
 }
 
 export function signImagorUrl(path) {
@@ -18,7 +18,7 @@ export function signImagorUrl(path) {
   if (!secret) {
     return null;
   }
-  const hmac = createHmac('sha256', secret).update(path).digest('base64url');
+  const hmac = createHmac("sha256", secret).update(path).digest("base64url");
   return `${getBaseUrl()}/${hmac}/${path}`;
 }
 

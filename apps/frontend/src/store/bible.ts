@@ -495,7 +495,7 @@ export const useBibleStore = create<BibleState>()(
       },
     }),
     {
-      name: "koza-bible-v2",
+      name: "piece-bible-v2",
       storage: safeStorage,
       partialize: (state) => ({
         activeProjectId: state.activeProjectId,

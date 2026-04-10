@@ -747,6 +747,6 @@ export const useScriptStore = create<ScriptState>()(
           }
         }),
     }),
-    { name: "koza-script", storage: safeStorage }
+    { name: "piece-script", storage: safeStorage }
   )
 )

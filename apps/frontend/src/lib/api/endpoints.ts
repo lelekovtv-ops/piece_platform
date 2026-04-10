@@ -14,7 +14,7 @@ export const ENDPOINTS = {
   searchImages: (pid: string) => `/v1/projects/${pid}/generate/search`,
   generateImage: (pid: string) => `/v1/projects/${pid}/generate/image`,
 
-  // koza-tools endpoints (created in this phase)
+  // ai-tools endpoints (created in this phase)
   nanoBanana: "/v1/tools/nano-banana",
   ambientImage: "/v1/tools/ambient-image",
   ambientPrompt: "/v1/tools/ambient-prompt",

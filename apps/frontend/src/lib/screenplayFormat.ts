@@ -1,5 +1,5 @@
 /**
- * KOZA Screenplay Format Engine v2
+ * Piece Screenplay Format Engine v2
  * Block-based architecture inspired by Arc Studio Pro.
  *
  * Core idea: the screenplay is NOT a flat string of lines.

@@ -187,7 +187,7 @@ Config files: `nginx/conf.d/` (prod.conf, stage.conf, staging-ip.conf, staging-s
 api.{domain}      -> api-gateway:3100 (REST API)
 api.{domain}/socket.io/  -> websocket-gateway:3109 (WebSocket upgrade)
 api.{domain}/img/        -> imagorvideo:8000 (image processing)
-api.{domain}/storage/koza-uploads/  -> minio:9000 (S3 storage)
+api.{domain}/storage/piece-uploads/  -> minio:9000 (S3 storage)
 app.{domain}      -> platform:3000 (Frontend)
 ```
 
@@ -205,7 +205,7 @@ Staging uses `/api/` prefix rewrite instead of separate subdomain. Grafana at `/
 | Route | Cache-Control | Expires |
 |-------|--------------|---------|
 | `/img/` | `public, immutable` | 7 days |
-| `/storage/koza-uploads/` | `public, immutable` | 30 days |
+| `/storage/piece-uploads/` | `public, immutable` | 30 days |
 | Static assets (js/css/img/fonts) | `public, immutable` | 1 year (prod) / 7 days (staging) |
 
 ### Timeouts

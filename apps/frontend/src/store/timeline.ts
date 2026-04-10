@@ -542,7 +542,7 @@ export const useTimelineStore = create<TimelineState>()(
         })),
     }),
     {
-      name: "koza-timeline-v2",
+      name: "piece-timeline-v2",
       storage: safeStorage,
       partialize: (state) => ({
         shots: state.shots.map((s) => ({

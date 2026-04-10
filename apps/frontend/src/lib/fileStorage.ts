@@ -1,4 +1,4 @@
-const DB_NAME = 'koza-files'
+const DB_NAME = 'piece-files'
 const STORE_NAME = 'blobs'
 
 let dbPromise: Promise<IDBDatabase> | null = null

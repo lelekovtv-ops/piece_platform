@@ -277,7 +277,7 @@ function SceneCallSheet({
 function SharePanel({ role }: { role: Role }) {
   const [copied, setCopied] = useState(false)
   const roleConfig = ROLES.find((r) => r.id === role)
-  const mockLink = useMemo(() => `koza.app/share/${role}-${Date.now().toString(36)}`, [role])
+  const mockLink = useMemo(() => `piece.app/share/${role}-${Date.now().toString(36)}`, [role])
 
   const handleCopy = () => {
     navigator.clipboard.writeText(mockLink)

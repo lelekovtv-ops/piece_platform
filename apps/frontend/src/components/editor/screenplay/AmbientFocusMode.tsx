@@ -80,7 +80,7 @@ const AMBIENT_STORAGE_PREFIX = "ambient-focus-"
 /** Get project-scoped storage keys */
 function getProjectId(): string {
   try {
-    const raw = localStorage.getItem("koza-projects")
+    const raw = localStorage.getItem("piece-projects")
     if (raw) {
       const parsed = JSON.parse(raw)
       if (parsed?.state?.activeProjectId) return parsed.state.activeProjectId
@@ -89,8 +89,8 @@ function getProjectId(): string {
   return "default"
 }
 
-function getAmbientIndexKey(): string { return `koza-ambient-images-${getProjectId()}` }
-function getAmbientHashesKey(): string { return `koza-ambient-hashes-${getProjectId()}` }
+function getAmbientIndexKey(): string { return `piece-ambient-images-${getProjectId()}` }
+function getAmbientHashesKey(): string { return `piece-ambient-hashes-${getProjectId()}` }
 
 async function generateAmbientImage(prompt: string): Promise<{ url: string; blobKey: string } | null> {
   try {

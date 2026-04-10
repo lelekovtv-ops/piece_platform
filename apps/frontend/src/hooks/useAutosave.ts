@@ -68,7 +68,7 @@ export function useAutosave(enabled = true): UseAutosaveResult {
           date: current.date,
           updatedAt: Date.now(),
         }
-        localStorage.setItem(`koza-script-autosave:${projectId}`, JSON.stringify(payload))
+        localStorage.setItem(`piece-script-autosave:${projectId}`, JSON.stringify(payload))
       }
 
       setStatus("saved")

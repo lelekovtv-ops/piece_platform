@@ -1,42 +1,42 @@
-import { config } from './config.js';
-import * as Sentry from '@sentry/node';
+import { config } from "./config.js";
+import * as Sentry from "@sentry/node";
 
-const sentryDsn = config.get('SENTRY_DSN_BACKEND');
+const sentryDsn = config.get("SENTRY_DSN_BACKEND");
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
-    environment: config.get('NODE_ENV'),
+    environment: config.get("NODE_ENV"),
     tracesSampleRate: 0.5,
   });
 }
 
-import { logger, createComponentLogger } from './utils/logger.js';
-import { createRequestLoggingMiddleware } from '@piece/logger';
-import express from 'express';
-import cookieParser from 'cookie-parser';
-import helmet from 'helmet';
-import { corsMiddleware } from '@piece/cors-middleware';
-import { createAuthMiddleware } from '@piece/auth-middleware';
-import { registerUserRoutes } from './modules/users/routes.js';
-import { registerAuthRoutes } from './modules/auth/routes.js';
-import { registerTeamRoutes } from './modules/teams/routes.js';
-import { registerProjectRoutes } from './modules/projects/routes.js';
-import { registerUploadRoutes } from './modules/upload/routes.js';
-import { registerLibraryRoutes } from './modules/library/routes.js';
-import { registerScreenplayRoutes } from './modules/screenplay/routes.js';
-import { registerRundownRoutes } from './modules/rundown/routes.js';
-import { registerBibleRoutes } from './modules/bible/routes.js';
-import { registerAIRoutes } from './modules/ai/routes.js';
-import { registerGenerationRoutes } from './modules/generation/routes.js';
-import { registerPipelineRoutes } from './modules/pipeline/routes.js';
-import { registerSettingsRoutes } from './modules/settings/routes.js';
-import { registerTranslateRoutes } from './modules/translate/routes.js';
-import { registerKozaToolsRoutes } from './modules/koza-tools/routes.js';
-import { createRateLimiter } from './middleware/rate-limiter.js';
-import { createCsrfMiddleware } from './middleware/csrf.js';
-import { buildPrometheusMetrics } from './middleware/prometheus-metrics.js';
+import { logger, createComponentLogger } from "./utils/logger.js";
+import { createRequestLoggingMiddleware } from "@piece/logger";
+import express from "express";
+import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import { corsMiddleware } from "@piece/cors-middleware";
+import { createAuthMiddleware } from "@piece/auth-middleware";
+import { registerUserRoutes } from "./modules/users/routes.js";
+import { registerAuthRoutes } from "./modules/auth/routes.js";
+import { registerTeamRoutes } from "./modules/teams/routes.js";
+import { registerProjectRoutes } from "./modules/projects/routes.js";
+import { registerUploadRoutes } from "./modules/upload/routes.js";
+import { registerLibraryRoutes } from "./modules/library/routes.js";
+import { registerScreenplayRoutes } from "./modules/screenplay/routes.js";
+import { registerRundownRoutes } from "./modules/rundown/routes.js";
+import { registerBibleRoutes } from "./modules/bible/routes.js";
+import { registerAIRoutes } from "./modules/ai/routes.js";
+import { registerGenerationRoutes } from "./modules/generation/routes.js";
+import { registerPipelineRoutes } from "./modules/pipeline/routes.js";
+import { registerSettingsRoutes } from "./modules/settings/routes.js";
+import { registerTranslateRoutes } from "./modules/translate/routes.js";
+import { registerAiToolsRoutes } from "./modules/ai-tools/routes.js";
+import { createRateLimiter } from "./middleware/rate-limiter.js";
+import { createCsrfMiddleware } from "./middleware/csrf.js";
+import { buildPrometheusMetrics } from "./middleware/prometheus-metrics.js";
 
-const componentLogger = createComponentLogger('Application');
+const componentLogger = createComponentLogger("Application");
 
 let _authMiddleware = null;
 let _tokenBlacklist = null;
@@ -47,28 +47,30 @@ export function getTokenBlacklist() {
 
 const setupApp = () => {
   const app = express();
-  const PORT = config.get('PORT');
+  const PORT = config.get("PORT");
 
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:', '*.amazonaws.com'],
-        connectSrc: ["'self'", 'wss:', 'ws:'],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        frameAncestors: ["'none'"],
-        baseUri: ["'self'"],
-        formAction: ["'self'"],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "blob:", "*.amazonaws.com"],
+          connectSrc: ["'self'", "wss:", "ws:"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false,
-  }));
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   app.use(corsMiddleware);
   app.use(cookieParser());
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: "10mb" }));
   app.use(createRequestLoggingMiddleware(logger));
   app.use(createRateLimiter({ maxRequests: 100, windowSeconds: 60 }));
   app.use(createCsrfMiddleware());
@@ -76,87 +78,89 @@ const setupApp = () => {
   let backgroundServicesReady = false;
 
   const runHealthChecks = async () => {
-    const checks = { mongodb: 'unknown', redis: 'unknown', nats: 'unknown' };
+    const checks = { mongodb: "unknown", redis: "unknown", nats: "unknown" };
 
     try {
-      const { getSystemDb } = await import('@piece/multitenancy');
+      const { getSystemDb } = await import("@piece/multitenancy");
       const db = getSystemDb();
       if (db) {
         await db.command({ ping: 1 });
-        checks.mongodb = 'connected';
+        checks.mongodb = "connected";
       } else {
-        checks.mongodb = 'not initialized';
+        checks.mongodb = "not initialized";
       }
     } catch {
-      checks.mongodb = 'disconnected';
+      checks.mongodb = "disconnected";
     }
 
     try {
-      const { getRedisClient } = await import('@piece/cache');
+      const { getRedisClient } = await import("@piece/cache");
       const redis = getRedisClient();
       if (redis) {
         await redis.ping();
-        checks.redis = 'connected';
+        checks.redis = "connected";
       } else {
-        checks.redis = 'not initialized';
+        checks.redis = "not initialized";
       }
     } catch {
-      checks.redis = 'disconnected';
+      checks.redis = "disconnected";
     }
 
     try {
-      const { getNatsClient } = await import('@piece/pubsub');
+      const { getNatsClient } = await import("@piece/pubsub");
       const nats = getNatsClient();
       if (nats) {
-        checks.nats = nats.isClosed() ? 'disconnected' : 'connected';
+        checks.nats = nats.isClosed() ? "disconnected" : "connected";
       } else {
-        checks.nats = 'not initialized';
+        checks.nats = "not initialized";
       }
     } catch {
-      checks.nats = 'disconnected';
+      checks.nats = "disconnected";
     }
 
     return checks;
   };
 
-  app.get('/health/live', (req, res) => {
-    res.json({ status: 'alive', timestamp: new Date().toISOString() });
+  app.get("/health/live", (req, res) => {
+    res.json({ status: "alive", timestamp: new Date().toISOString() });
   });
 
-  app.get('/health/ready', async (req, res) => {
+  app.get("/health/ready", async (req, res) => {
     if (!backgroundServicesReady) {
       return res.status(503).json({
-        status: 'not ready',
-        message: 'Background services still initializing',
+        status: "not ready",
+        message: "Background services still initializing",
       });
     }
     const checks = await runHealthChecks();
-    const allHealthy = checks.mongodb === 'connected' && checks.redis === 'connected';
+    const allHealthy =
+      checks.mongodb === "connected" && checks.redis === "connected";
     res.status(allHealthy ? 200 : 503).json({
-      status: allHealthy ? 'ready' : 'degraded',
+      status: allHealthy ? "ready" : "degraded",
       checks,
     });
   });
 
-  app.get('/health', async (req, res) => {
+  app.get("/health", async (req, res) => {
     const checks = await runHealthChecks();
-    const allHealthy = checks.mongodb !== 'disconnected' && checks.redis !== 'disconnected';
+    const allHealthy =
+      checks.mongodb !== "disconnected" && checks.redis !== "disconnected";
 
     res.status(allHealthy ? 200 : 503).json({
-      status: allHealthy ? 'healthy' : 'degraded',
-      service: config.get('SERVICE_NAME'),
-      version: '0.1.0',
+      status: allHealthy ? "healthy" : "degraded",
+      service: config.get("SERVICE_NAME"),
+      version: "0.1.0",
       uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
-      backgroundServices: backgroundServicesReady ? 'ready' : 'initializing',
+      backgroundServices: backgroundServicesReady ? "ready" : "initializing",
       checks,
     });
   });
 
-  app.get('/internal/metrics', (req, res) => {
+  app.get("/internal/metrics", (req, res) => {
     const mem = process.memoryUsage();
     res.json({
-      service: config.get('SERVICE_NAME'),
+      service: config.get("SERVICE_NAME"),
       uptime: process.uptime(),
       memory: {
         rss: Math.round(mem.rss / 1024 / 1024),
@@ -169,17 +173,18 @@ const setupApp = () => {
     });
   });
 
-  app.get('/internal/metrics/prometheus', (req, res) => {
-    res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  app.get("/internal/metrics/prometheus", (req, res) => {
+    res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
     res.send(buildPrometheusMetrics());
   });
 
   app.use((req, res, next) => {
     if (backgroundServicesReady) return next();
-    if (req.path === '/health' || req.path.startsWith('/internal/metrics')) return next();
+    if (req.path === "/health" || req.path.startsWith("/internal/metrics"))
+      return next();
     res.status(503).json({
-      error: 'SERVICE_UNAVAILABLE',
-      message: 'Service is starting up, please retry',
+      error: "SERVICE_UNAVAILABLE",
+      message: "Service is starting up, please retry",
     });
   });
 
@@ -188,17 +193,24 @@ const setupApp = () => {
   };
 
   let authMiddleware = {};
-  const jwtPublicKey = config.get('JWT_PUBLIC_KEY_BASE64');
+  const jwtPublicKey = config.get("JWT_PUBLIC_KEY_BASE64");
   if (jwtPublicKey) {
     authMiddleware = createAuthMiddleware({ config });
     _authMiddleware = authMiddleware;
-  } else if (config.get('NODE_ENV') === 'production') {
-    componentLogger.error('JWT_PUBLIC_KEY_BASE64 is required in production');
+  } else if (config.get("NODE_ENV") === "production") {
+    componentLogger.error("JWT_PUBLIC_KEY_BASE64 is required in production");
     process.exit(1);
   } else {
-    componentLogger.warn('JWT keys not configured — authenticated routes will reject all requests');
+    componentLogger.warn(
+      "JWT keys not configured — authenticated routes will reject all requests",
+    );
     const rejectAuth = (req, res) => {
-      res.status(401).json({ error: 'UNAUTHORIZED', message: 'Authentication not configured' });
+      res
+        .status(401)
+        .json({
+          error: "UNAUTHORIZED",
+          message: "Authentication not configured",
+        });
     };
     authMiddleware = {
       authenticateToken: rejectAuth,
@@ -222,109 +234,124 @@ const setupApp = () => {
   registerPipelineRoutes(app, authMiddleware);
   registerSettingsRoutes(app, authMiddleware);
   registerTranslateRoutes(app, authMiddleware);
-  registerKozaToolsRoutes(app, authMiddleware);
+  registerAiToolsRoutes(app, authMiddleware);
 
-  app.use('*', (req, res) => {
-    res.status(404).json({ error: 'NOT_FOUND', message: 'Route not found' });
+  app.use("*", (req, res) => {
+    res.status(404).json({ error: "NOT_FOUND", message: "Route not found" });
   });
 
   app.use((error, req, res, _next) => {
-    componentLogger.error('Unhandled error', { error: error.message, stack: error.stack });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Internal server error' });
+    componentLogger.error("Unhandled error", {
+      error: error.message,
+      stack: error.stack,
+    });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Internal server error" });
   });
 
   return { app, PORT };
 };
 
 const initializeBackgroundServices = async () => {
-  const { initializeMultiTenancy, getSystemDb } = await import('@piece/multitenancy');
-  const { initializeSystemIndexes } = await import('./db/index.js');
-  const { initializePermissions } = await import('@piece/permissions');
-  const { initializeServiceCache } = await import('@piece/cache');
-  const { initializePubSub } = await import('@piece/pubsub');
+  const { initializeMultiTenancy, getSystemDb } =
+    await import("@piece/multitenancy");
+  const { initializeSystemIndexes } = await import("./db/index.js");
+  const { initializePermissions } = await import("@piece/permissions");
+  const { initializeServiceCache } = await import("@piece/cache");
+  const { initializePubSub } = await import("@piece/pubsub");
 
-  const mongoUri = config.get('MONGODB_URI');
+  const mongoUri = config.get("MONGODB_URI");
   await initializeMultiTenancy(mongoUri, {
-    systemDbName: config.get('MONGODB_SYSTEM_DB'),
+    systemDbName: config.get("MONGODB_SYSTEM_DB"),
   });
-  componentLogger.info('MongoDB connected');
+  componentLogger.info("MongoDB connected");
 
   await initializeSystemIndexes();
-  componentLogger.info('System indexes initialized');
+  componentLogger.info("System indexes initialized");
 
   await initializePermissions(getSystemDb(), { config });
-  componentLogger.info('Permissions initialized');
+  componentLogger.info("Permissions initialized");
 
   try {
-    await initializeServiceCache('piece', config, { strategy: 'redis' });
-    componentLogger.info('Redis cache initialized');
+    await initializeServiceCache("piece", config, { strategy: "redis" });
+    componentLogger.info("Redis cache initialized");
 
-    const { getRedisClient } = await import('@piece/cache');
-    const { createTokenBlacklist } = await import('@piece/cache/tokenBlacklist');
+    const { getRedisClient } = await import("@piece/cache");
+    const { createTokenBlacklist } =
+      await import("@piece/cache/tokenBlacklist");
     const redis = getRedisClient();
     if (redis && _authMiddleware?.setTokenBlacklist) {
       _tokenBlacklist = createTokenBlacklist(redis);
       _authMiddleware.setTokenBlacklist(_tokenBlacklist);
-      componentLogger.info('Token blacklist initialized');
+      componentLogger.info("Token blacklist initialized");
     }
   } catch (err) {
-    componentLogger.warn('Redis cache init failed (non-critical)', { error: err.message });
+    componentLogger.warn("Redis cache init failed (non-critical)", {
+      error: err.message,
+    });
   }
 
   try {
-    await initializePubSub(config, { serviceName: 'piece' });
-    componentLogger.info('NATS PubSub initialized');
+    await initializePubSub(config, { serviceName: "piece" });
+    componentLogger.info("NATS PubSub initialized");
   } catch (err) {
-    componentLogger.warn('NATS PubSub init failed (non-critical)', { error: err.message });
+    componentLogger.warn("NATS PubSub init failed (non-critical)", {
+      error: err.message,
+    });
   }
 
   try {
-    const { initializeEmail } = await import('@piece/email');
+    const { initializeEmail } = await import("@piece/email");
     initializeEmail(config);
-    componentLogger.info('Email client initialized');
+    componentLogger.info("Email client initialized");
   } catch (err) {
-    componentLogger.warn('Email client init failed (non-critical)', { error: err.message });
+    componentLogger.warn("Email client init failed (non-critical)", {
+      error: err.message,
+    });
   }
 
   try {
-    const { startSessionCleanup } = await import('./jobs/cleanup-sessions.js');
+    const { startSessionCleanup } = await import("./jobs/cleanup-sessions.js");
     startSessionCleanup();
   } catch (err) {
-    componentLogger.warn('Session cleanup job failed to start', { error: err.message });
+    componentLogger.warn("Session cleanup job failed to start", {
+      error: err.message,
+    });
   }
 };
 
 const startServer = async () => {
   try {
-    componentLogger.info('Starting service', {
-      nodeEnv: config.get('NODE_ENV'),
-      port: config.get('PORT'),
+    componentLogger.info("Starting service", {
+      nodeEnv: config.get("NODE_ENV"),
+      port: config.get("PORT"),
     });
 
     const { app, PORT } = setupApp();
 
-    httpServer = app.listen(PORT, '0.0.0.0', () => {
-      componentLogger.info('HTTP server listening', { port: PORT });
+    httpServer = app.listen(PORT, "0.0.0.0", () => {
+      componentLogger.info("HTTP server listening", { port: PORT });
     });
 
-    httpServer.on('error', (error) => {
-      componentLogger.error('Server error', { error: error.message });
+    httpServer.on("error", (error) => {
+      componentLogger.error("Server error", { error: error.message });
     });
 
     initializeBackgroundServices()
       .then(() => {
         app.setBackgroundServicesReady(true);
-        componentLogger.info('Service fully operational');
+        componentLogger.info("Service fully operational");
       })
       .catch((error) => {
-        componentLogger.error('Failed to initialize background services', {
+        componentLogger.error("Failed to initialize background services", {
           error: error.message,
           stack: error.stack,
         });
         process.exit(1);
       });
   } catch (error) {
-    componentLogger.error('Failed to start server', {
+    componentLogger.error("Failed to start server", {
       error: error.message,
       stack: error.stack,
     });
@@ -332,13 +359,16 @@ const startServer = async () => {
   }
 };
 
-process.on('uncaughtException', (error) => {
-  componentLogger.error('Uncaught exception', { error: error.message, stack: error.stack });
+process.on("uncaughtException", (error) => {
+  componentLogger.error("Uncaught exception", {
+    error: error.message,
+    stack: error.stack,
+  });
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason) => {
-  componentLogger.error('Unhandled rejection', { reason: reason?.toString() });
+process.on("unhandledRejection", (reason) => {
+  componentLogger.error("Unhandled rejection", { reason: reason?.toString() });
   process.exit(1);
 });
 
@@ -352,7 +382,7 @@ async function gracefulShutdown(signal) {
   }
 
   try {
-    const { getNatsClient } = await import('@piece/pubsub');
+    const { getNatsClient } = await import("@piece/pubsub");
     const natsClient = getNatsClient();
     if (natsClient) {
       await natsClient.close();
@@ -362,7 +392,7 @@ async function gracefulShutdown(signal) {
   }
 
   try {
-    const { closeConnection } = await import('@piece/multitenancy');
+    const { closeConnection } = await import("@piece/multitenancy");
     await closeConnection();
   } catch {
     // MongoDB may not have been initialized
@@ -371,7 +401,7 @@ async function gracefulShutdown(signal) {
   process.exit(0);
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 
 startServer();

@@ -466,7 +466,7 @@ export default function DevSettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <span className="text-sm text-white/70">LocalStorage Keys</span>
-              <p className="text-[11px] text-white/30">koza-board, koza-breakdown-config-v1, koza-storyboard-v2</p>
+              <p className="text-[11px] text-white/30">piece-board, piece-breakdown-config-v2, piece-storyboard-v2</p>
             </div>
             <button
               type="button"
@@ -495,7 +495,7 @@ export default function DevSettingsPage() {
             type="button"
             onClick={() => {
               if (confirm("Are you sure? This will delete ALL data including projects, scripts, Bible, timeline, and voice clips. This cannot be undone.")) {
-                const keys = Object.keys(localStorage).filter((k) => k.startsWith("koza-") || k.startsWith("piece-"))
+                const keys = Object.keys(localStorage).filter((k) => k.startsWith("piece-") || k.startsWith("piece-"))
                 for (const k of keys) localStorage.removeItem(k)
                 window.location.reload()
               }
