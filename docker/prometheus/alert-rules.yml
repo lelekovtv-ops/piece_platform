@@ -58,7 +58,7 @@ groups:
 
       - alert: HighMemoryUsage
         expr: |
-          (1 - node_memory_AvailableBytes / node_memory_MemTotal_bytes) > 0.85
+          (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
         for: 10m
         labels:
           severity: warning
