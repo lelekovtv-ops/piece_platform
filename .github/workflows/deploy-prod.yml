@@ -1,0 +1,168 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Build Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm exec nx run-many -t lint --skip-nx-cache
+
+      - name: Test
+        run: pnpm test
+
+  deploy:
+    name: Deploy
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Generate .env file
+        run: |
+          cat > .env.production <<ENVEOF
+          NODE_ENV=production
+          MONGO_ROOT_USER=${{ secrets.MONGO_ROOT_USER }}
+          MONGO_ROOT_PASSWORD=${{ secrets.MONGO_ROOT_PASSWORD }}
+          MONGODB_SYSTEM_DB=piece_system
+          JWT_PUBLIC_KEY_BASE64=${{ secrets.JWT_PUBLIC_KEY_BASE64 }}
+          JWT_PRIVATE_KEY_BASE64=${{ secrets.JWT_PRIVATE_KEY_BASE64 }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          INTERNAL_TOKEN=${{ secrets.INTERNAL_TOKEN }}
+          LOG_LEVEL=INFO
+          FROM_EMAIL=${{ vars.FROM_EMAIL || 'noreply@piece-app.com' }}
+          FROM_NAME=${{ vars.FROM_NAME || 'Piece' }}
+          SES_REGION=${{ vars.SES_REGION || 'eu-central-1' }}
+          SES_ACCESS_KEY_ID=${{ secrets.SES_ACCESS_KEY_ID }}
+          SES_SECRET_ACCESS_KEY=${{ secrets.SES_SECRET_ACCESS_KEY }}
+          SES_CONFIGURATION_SET=${{ vars.SES_CONFIGURATION_SET || '' }}
+          DISABLE_EMAIL_SENDING=false
+          SENTRY_DSN_BACKEND=${{ secrets.SENTRY_DSN_BACKEND }}
+          NEXT_PUBLIC_SENTRY_DSN=${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          NEXT_PUBLIC_POSTHOG_KEY=${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
+          NEXT_PUBLIC_API_BASE_URL=https://api.piece-app.com
+          WS_CORS_ORIGINS=https://app.piece-app.com,https://piece-app.com
+          FRONTEND_URL=https://app.piece-app.com
+          S3_PUBLIC_URL=https://api.piece-app.com/storage/piece-uploads
+          IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
+          GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          ENVEOF
+          sed -i 's/^[[:space:]]*//' .env.production
+
+      - name: Upload .env to production server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: .env.production
+          target: ~/piece/
+
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            # First-time setup: clone repo if not a git repository
+            if [ ! -d ~/piece/.git ]; then
+              echo "First deploy — cloning repository..."
+              TEMP_ENV=""
+              if [ -f ~/piece/.env.production ]; then
+                TEMP_ENV=$(cat ~/piece/.env.production)
+              fi
+              rm -rf ~/piece
+              git clone --branch main git@github.com:${{ github.repository }}.git ~/piece
+              if [ -n "$TEMP_ENV" ]; then
+                echo "$TEMP_ENV" > ~/piece/.env.production
+              fi
+            fi
+
+            cd ~/piece
+            mv .env.production .env
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Ensure infrastructure is running (no recreate — preserves data & uptime)
+            docker compose up -d mongodb redis nats minio qdrant postgres
+
+            echo "Waiting for infrastructure..."
+            sleep 10
+
+            # Ensure MongoDB replica set is initialized (idempotent — skips if already done)
+            docker compose up -d mongo-init-replica
+            sleep 5
+
+            # Verify MongoDB replica set
+            echo "=== MongoDB replica set status ==="
+            docker compose exec -T mongodb mongosh --quiet \
+              -u ${MONGO_ROOT_USER:-admin} -p ${MONGO_ROOT_PASSWORD:-changeme} \
+              --authenticationDatabase admin \
+              --eval "printjson(rs.status().ok)" 2>&1 || echo "rs.status() failed"
+
+            # Build backend base image (--no-cache ensures code fixes are included)
+            docker build --no-cache -f docker/Dockerfile.base -t piece-base:latest .
+
+            # Build and recreate only application containers (not infrastructure)
+            docker compose build --parallel api-gateway websocket-gateway platform
+            docker compose up -d --no-deps --force-recreate api-gateway websocket-gateway platform imagorvideo nginx
+
+            echo "Waiting for services to be healthy..."
+            for i in $(seq 1 30); do
+              if curl -sf http://127.0.0.1:3100/health > /dev/null 2>&1; then
+                echo "Backend healthy after ${i}0 seconds"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "Health check failed after 300 seconds"
+                echo "=== api-gateway logs ==="
+                docker compose logs --tail=100 api-gateway
+                echo "=== MongoDB replica set status ==="
+                docker compose exec -T mongodb mongosh --quiet \
+                  -u \${MONGO_ROOT_USER:-admin} -p \${MONGO_ROOT_PASSWORD:-changeme} \
+                  --authenticationDatabase admin \
+                  --eval "printjson(rs.status())" 2>&1 || echo "rs.status() failed"
+                echo "=== websocket-gateway logs ==="
+                docker compose logs --tail=30 websocket-gateway
+                echo "=== platform logs ==="
+                docker compose logs --tail=30 platform
+                echo "=== container status ==="
+                docker compose ps
+                exit 1
+              fi
+              sleep 10
+            done
+
+            echo "Production deploy complete"
+            docker compose ps
