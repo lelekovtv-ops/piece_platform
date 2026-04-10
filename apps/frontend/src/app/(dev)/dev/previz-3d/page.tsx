@@ -995,7 +995,7 @@ export default function Previz3DPage() {
   }
 
   return (
-    <main className="flex h-screen bg-[#0E0D0B] text-white overflow-hidden">
+    <main className="flex h-full text-white overflow-hidden">
       {/* ── Left Panel: Scene Hierarchy + Objects ── */}
       <div className="flex w-72 flex-col border-r border-white/8 bg-[#111110]">
         {/* Header */}

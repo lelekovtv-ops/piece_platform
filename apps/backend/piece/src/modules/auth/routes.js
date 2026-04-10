@@ -11,12 +11,16 @@ router.post('/v1/auth/login', authLimiter, authController.login);
 router.post('/v1/auth/magic-link', authLimiter, authController.sendMagicLink);
 router.post('/v1/auth/magic-link/verify', authLimiter, authController.verifyMagicToken);
 router.post('/v1/auth/refresh', authLimiter, authController.refresh);
+router.post('/v1/auth/email/verify', authLimiter, authController.verifyEmail);
+router.post('/v1/auth/password-reset/request', authLimiter, authController.requestPasswordReset);
+router.post('/v1/auth/password-reset/confirm', authLimiter, authController.confirmPasswordReset);
 
 export function registerAuthRoutes(app, { authenticateToken, authenticateInternalToken } = {}) {
   if (authenticateToken) {
     router.post('/v1/auth/logout', authenticateToken, authController.logout);
     router.get('/v1/auth/me', authenticateToken, authController.me);
     router.post('/v1/auth/change-password', authenticateToken, authController.changePassword);
+    router.post('/v1/auth/email/send-verification', authenticateToken, authController.sendVerificationEmail);
     router.get('/v1/auth/sessions', authenticateToken, authController.listSessions);
     router.delete('/v1/auth/sessions/:sessionId', authenticateToken, authController.revokeSession);
     router.delete('/v1/auth/sessions', authenticateToken, authController.revokeAllOtherSessions);

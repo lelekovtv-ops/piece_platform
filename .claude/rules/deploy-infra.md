@@ -57,10 +57,17 @@ All infrastructure runs as Docker containers via `docker-compose.yml`:
 | MongoDB | `mongo:7` | 2G | Primary database (multi-tenant) |
 | Redis | `redis:7-alpine` | 1G | Caching, rate limiting |
 | NATS | `nats:2.10-alpine` | 512M | Messaging (JetStream) |
+| Postgres | `postgres:16-alpine` | 512M | Relational data |
 | MinIO | `minio/minio:latest` | 512M | S3-compatible object storage |
-| Nginx | `nginx:alpine` | -- | Reverse proxy, SSL termination |
+| Imagorvideo | `shumc/imagorvideo` | 1G | Image/video processing proxy |
+| Nginx | `nginx:alpine` | 256M | Reverse proxy, SSL termination |
 | Certbot | `certbot/certbot` | -- | Let's Encrypt SSL certificates |
-| Qdrant | `qdrant/qdrant:v1.14.0` | 4G | Vector search (optional) |
+| Qdrant | `qdrant/qdrant:v1.14.0` | 512M | Vector search (optional) |
+| Prometheus | `prom/prometheus:v2.53.0` | 512M | Metrics collection |
+| Grafana | `grafana/grafana:11.0.0` | 256M | Monitoring dashboard |
+| Loki | `grafana/loki:3.0.0` | 256M | Log aggregation |
+| Promtail | `grafana/promtail:3.0.0` | 128M | Log shipping |
+| Node Exporter | `prom/node-exporter:v1.8.0` | 64M | Host metrics |
 
 ## Dockerfile Strategy
 
@@ -97,7 +104,7 @@ CMD ["node", "src/index.js"]
 
 ### Dockerfile.platform (frontend)
 
-Multi-stage build: Vite build + static serve via nginx or `serve`.
+Multi-stage build: Next.js build + standalone output served via `node server.js`.
 
 ## Docker Compose
 
@@ -150,8 +157,9 @@ healthcheck:
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | PR to main | Lint, build, test |
-| `deploy-prod.yml` | Push to `main` | Build gate + deploy to production |
 | `deploy-stage.yml` | Push to `stage` | Deploy to staging |
+
+> **NOTE:** `deploy-prod.yml` is not yet created. Production deployment workflow is pending.
 
 ### Deploy Flow
 
@@ -170,14 +178,86 @@ push to main
 
 ## Nginx Reverse Proxy
 
+Config files: `nginx/conf.d/` (prod.conf, stage.conf, staging-ip.conf, staging-ssl.conf).
+
+### Routing Matrix (Production)
+
 ```
-api.{domain}    -> api-gateway:3100 (API)
-                -> websocket-gateway:3109 (WebSocket at /socket.io/)
-app.{domain}    -> platform:3000 (Frontend)
-{domain}        -> redirect to app.{domain}
+{domain}          -> redirect to app.{domain}
+api.{domain}      -> api-gateway:3100 (REST API)
+api.{domain}/socket.io/  -> websocket-gateway:3109 (WebSocket upgrade)
+api.{domain}/img/        -> imagorvideo:8000 (image processing)
+api.{domain}/storage/koza-uploads/  -> minio:9000 (S3 storage)
+app.{domain}      -> platform:3000 (Frontend)
 ```
 
+Staging uses `/api/` prefix rewrite instead of separate subdomain. Grafana at `/grafana/`.
+
+### Rate Limits
+
+| Zone | Rate | Burst | Applied to |
+|------|------|-------|-----------|
+| `api_limit` | 100 req/s | 50 | REST API (`/`) |
+| `img_limit` | 200 req/s | 100 | Image processing (`/img/`) |
+
+### Cache Headers
+
+| Route | Cache-Control | Expires |
+|-------|--------------|---------|
+| `/img/` | `public, immutable` | 7 days |
+| `/storage/koza-uploads/` | `public, immutable` | 30 days |
+| Static assets (js/css/img/fonts) | `public, immutable` | 1 year (prod) / 7 days (staging) |
+
+### Timeouts
+
+| Route | Read/Send Timeout |
+|-------|------------------|
+| REST API | 120 seconds |
+| WebSocket | 86400 seconds (24 hours) |
+| Image processing | 30 seconds |
+
+### Security Headers
+
+- `Strict-Transport-Security`: max-age=63072000 (730 days), includeSubDomains
+- `X-Content-Type-Options`: nosniff
+- `X-Frame-Options`: DENY (prod) / SAMEORIGIN (staging)
+
+### Staging Gate (staging-ssl.conf)
+
+Cookie-based auth: `staging_auth` cookie with preset token. Unauthenticated requests redirect to `/gate`. API and Grafana bypass gate.
+
 SSL: Let's Encrypt via Certbot, auto-renewal.
+
+## Monitoring Stack
+
+### Prometheus
+
+Config: `docker/prometheus/prometheus.yml`. Scrape interval: 15s.
+
+| Job | Target | Metrics Path | Interval |
+|-----|--------|-------------|----------|
+| `piece-backend` | `api-gateway:3100` | `/internal/metrics/prometheus` | 15s |
+| `websocket-gateway` | `websocket-gateway:3109` | `/internal/metrics/prometheus` | 15s |
+| `node-exporter` | `node-exporter:9100` | `/metrics` | 15s |
+| `imagorvideo` | `imagorvideo:5001` | `/metrics` | 30s |
+| `prometheus` | `localhost:9090` | `/metrics` | 30s |
+
+### Loki
+
+Config: `docker/loki/loki-config.yml`.
+
+- Log retention: 168 hours (7 days)
+- TSDB schema v13, 24-hour period indexing
+- Query limit: 720 hours
+- Compaction every 10 minutes
+
+### Grafana
+
+Available at port 3001 (Docker) or `/grafana/` (via nginx). No pre-built dashboards -- configure manually.
+
+### Promtail
+
+Config: `docker/promtail/promtail-config.yml`. Ships Docker container logs to Loki.
 
 ## Secrets Management
 

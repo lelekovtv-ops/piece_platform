@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react"
 import Link from "next/link"
 import {
-  ArrowLeft, Clapperboard, PanelLeft, PanelLeftClose, Plus,
+  Clapperboard, PanelLeft, PanelLeftClose, Plus,
 } from "lucide-react"
 import { useBoardStore } from "@/store/board"
 import { useTimelineStore, type TimelineShot } from "@/store/timeline"
@@ -112,20 +112,12 @@ export default function DirectorPipelinePage() {
   }, [updateShot])
 
   return (
-    <main className="flex h-screen flex-col bg-[#0E0D0B] text-white">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/8 px-4 py-2.5">
-        <Link
-          href="/dev"
-          className="rounded-full p-1.5 text-white/30 transition hover:bg-white/5 hover:text-white/60"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <h1 className="text-sm font-semibold text-white/80">Director Pipeline</h1>
-        <span className="text-[10px] text-white/20">
+    <main className="flex h-full flex-col text-white">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 border-b border-white/8 px-4 py-2">
+        <span className="text-[10px] text-white/30">
           {scenes.length} scenes &middot; {shots.length} shots
         </span>
-
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}

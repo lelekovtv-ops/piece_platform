@@ -16,6 +16,10 @@ const AUTH_EVENTS = {
   ALL_SESSIONS_REVOKED: 'all_sessions_revoked',
   TOKEN_REFRESHED: 'token_refreshed',
   ACCOUNT_LOCKED: 'account_locked',
+  EMAIL_VERIFICATION_SENT: 'email_verification_sent',
+  EMAIL_VERIFIED: 'email_verified',
+  PASSWORD_RESET_REQUESTED: 'password_reset_requested',
+  PASSWORD_RESET_CONFIRMED: 'password_reset_confirmed',
 };
 
 function getAuditCollection() {

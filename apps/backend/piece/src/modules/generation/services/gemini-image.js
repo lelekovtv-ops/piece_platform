@@ -22,7 +22,7 @@ export async function generateImage({ prompt, referenceImages = [], aspectRatio 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     try {
       const response = await client.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash-image',
         contents: [{ role: 'user', parts: contents }],
         config: {
           responseModalities: ['IMAGE', 'TEXT'],

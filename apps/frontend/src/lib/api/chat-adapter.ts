@@ -86,11 +86,11 @@ export async function chatViaBackend(
 }
 
 function resolveModel(modelId?: string): { provider: string; model: string } {
-  if (!modelId || modelId.startsWith("claude"))
-    return { provider: "anthropic", model: modelId || "claude-sonnet-4-20250514" }
+  if (!modelId || modelId.startsWith("gemini"))
+    return { provider: "google", model: modelId || "gemini-2.5-flash" }
+  if (modelId.startsWith("claude"))
+    return { provider: "anthropic", model: modelId }
   if (modelId.startsWith("gpt"))
     return { provider: "openai", model: modelId }
-  if (modelId.startsWith("gemini"))
-    return { provider: "google", model: modelId }
-  return { provider: "anthropic", model: modelId }
+  return { provider: "google", model: modelId }
 }

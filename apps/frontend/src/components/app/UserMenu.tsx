@@ -4,11 +4,13 @@ import { useRouter } from "next/navigation"
 import { LogOut, User, Settings } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useAuthStore } from "@/lib/auth/auth-store"
+import { resendVerificationApi } from "@/lib/auth/auth-client"
 
 export function UserMenu() {
   const { user, isAuthenticated, logout } = useAuthStore()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [verificationSent, setVerificationSent] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -52,7 +54,30 @@ export function UserMenu() {
         <div className="absolute right-0 top-10 z-50 w-56 rounded-xl border border-white/10 bg-[#1A1917]/95 p-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
           <div className="px-3 py-2">
             <p className="text-[12px] font-medium text-[#E7E3DC]">{user.name}</p>
-            <p className="text-[11px] text-white/30">{user.email}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="text-[11px] text-white/30">{user.email}</p>
+              {user.emailVerified ? (
+                <span className="text-[9px] text-green-400/60">verified</span>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      await resendVerificationApi()
+                      setVerificationSent(true)
+                    } catch {
+                      setVerificationSent(false)
+                    }
+                  }}
+                  className={`text-[9px] transition-colors ${
+                    verificationSent
+                      ? "text-green-400/60"
+                      : "text-amber-400/60 hover:text-amber-400"
+                  }`}
+                >
+                  {verificationSent ? "sent!" : "unverified"}
+                </button>
+              )}
+            </div>
           </div>
           <div className="my-1 h-px bg-white/8" />
           <button

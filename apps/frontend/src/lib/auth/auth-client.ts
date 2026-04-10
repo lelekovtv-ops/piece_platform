@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string
   name: string
   avatarUrl?: string | null
+  emailVerified?: boolean
 }
 
 interface AuthResponse {
@@ -99,6 +100,65 @@ export async function getMeApi(): Promise<AuthUser | null> {
   if (!accessToken) return null
   const res = await fetch(`${API_BASE}/v1/auth/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
+    credentials: "include",
   })
   return res.ok ? res.json() : null
+}
+
+export async function resendVerificationApi(): Promise<{ message: string; devUrl?: string }> {
+  const res = await fetch(`${API_BASE}/v1/auth/email/send-verification`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    credentials: "include",
+  })
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}))
+    throw new Error(d.message || "Failed to send verification email")
+  }
+  return res.json()
+}
+
+export async function verifyEmailApi(token: string): Promise<{ message: string; verified: boolean }> {
+  const res = await fetch(`${API_BASE}/v1/auth/email/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+    credentials: "include",
+  })
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}))
+    throw new Error(d.message || "Verification failed")
+  }
+  return res.json()
+}
+
+export async function requestPasswordResetApi(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/v1/auth/password-reset/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+    credentials: "include",
+  })
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}))
+    throw new Error(d.message || "Request failed")
+  }
+  return res.json()
+}
+
+export async function confirmPasswordResetApi(token: string, newPassword: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE}/v1/auth/password-reset/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, newPassword }),
+    credentials: "include",
+  })
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}))
+    throw new Error(d.message || "Reset failed")
+  }
+  return res.json()
 }

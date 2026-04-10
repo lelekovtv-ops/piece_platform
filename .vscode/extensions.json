@@ -1,0 +1,20 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "ms-vscode.vscode-typescript-next",
+    "mongodb.mongodb-vscode",
+    "ms-azuretools.vscode-docker",
+    "eamodio.gitlens",
+    "ZixuanChen.vitest-explorer",
+    "ms-playwright.playwright",
+    "mikestead.dotenv",
+    "unifiedjs.vscode-mdx",
+    "yoavbls.pretty-ts-errors",
+    "usernamehw.errorlens",
+    "christian-kohler.path-intellisense",
+    "tomoki1207.pdf"
+  ],
+  "unwantedRecommendations": []
+}

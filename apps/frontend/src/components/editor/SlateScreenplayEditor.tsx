@@ -679,6 +679,45 @@ const SlateScreenplayEditor = forwardRef<
   const hasAnimatedSecondPageRef = useRef(false)
   const autoScrollRafRef = useRef<number | null>(null)
 
+  // ── Visible page range for virtualization ──
+  const [visiblePageRange, setVisiblePageRange] = useState<[number, number]>([0, 3])
+  useEffect(() => {
+    const scrollEl = embedded
+      ? findScrollableAncestor(embeddedRootRef.current)
+      : standaloneScrollRef.current
+    if (!scrollEl) return
+
+    let rafId: number | null = null
+    const update = () => {
+      const zs = (useScreenplaySettings.getState().zoom || 100) / 100
+      const pageH = SCREENPLAY_PAGE_HEIGHT_PX * zs
+      const gapH = SCREENPLAY_PAGE_GAP_PX * zs
+      const stride = pageH + gapH
+      if (stride <= 0) return
+
+      const top = scrollEl.scrollTop
+      const viewH = scrollEl.clientHeight
+      const first = Math.max(0, Math.floor(top / stride) - 1)
+      const last = Math.ceil((top + viewH) / stride) + 1
+      setVisiblePageRange((prev) => prev[0] === first && prev[1] === last ? prev : [first, last])
+    }
+
+    const onScroll = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        update()
+      })
+    }
+
+    update()
+    scrollEl.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      scrollEl.removeEventListener("scroll", onScroll)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+    }
+  }, [embedded])
+
   // ── Industry standard: 12pt Courier = 16px, single-spaced = ×1.25 ──
   const zoomScale = zoomPercent / 100
   const editorFontSize = SCREENPLAY_FONT_SIZE_PX * zoomScale
@@ -791,12 +830,15 @@ const SlateScreenplayEditor = forwardRef<
     return Math.max(1, Math.ceil((estimatedLines || 1) / SCREENPLAY_LINES_PER_PAGE))
   }, [editor.children])
 
-  // ── Page break calculation (industry-standard rules) ──
+  // ── Page break calculation (industry-standard rules, debounced) ──
 
-  const pageBreakInfo = useMemo(
-    () => calculatePageBreaks(editor.children),
-    [editor.children],
-  )
+  const [pageBreakInfo, setPageBreakInfo] = useState(() => calculatePageBreaks(editor.children))
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPageBreakInfo(calculatePageBreaks(editor.children))
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [editor.children])
   const pageBreakMargins = pageBreakInfo.margins
   const visualPageCount = pageBreakInfo.pageCount
 
@@ -1443,45 +1485,51 @@ const SlateScreenplayEditor = forwardRef<
           transition: idleFade ? "opacity 3s ease-in-out" : "opacity 0.4s ease-out",
         }}
       >
-        {/* Page paper backgrounds (hidden in scroll mode) */}
-        {!isScrollMode && Array.from({ length: visualPageCount }).map((_, i) => (
-          <div
-            key={`emb-page-${i}`}
-            style={{
-              position: "absolute",
-              top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX),
-              left: 0,
-              width: "100%",
-              height: SCREENPLAY_PAGE_HEIGHT_PX,
-              backgroundColor: focusMode ? "rgba(0,0,0,0.35)" : appTheme === "architect" ? colors.surfaceBg : paperTheme.bg,
-              borderRadius: focusMode ? 8 : 3,
-              border: focusMode ? "none" : appTheme === "architect" ? `1px solid ${colors.border}` : `1px solid ${paperTheme.bg === "#FFFFFF" ? "#E5E0DB" : "transparent"}`,
-              boxShadow: focusMode ? "0 0 60px rgba(0,0,0,0.4)" : appTheme === "architect" ? colors.shadow : "0 8px 60px rgba(0,0,0,0.4)",
-              backdropFilter: focusMode ? "blur(6px) saturate(0.95)" : undefined,
-              WebkitBackdropFilter: focusMode ? "blur(6px) saturate(0.95)" : undefined,
-              pointerEvents: "none",
-            }}
-          />
-        ))}
+        {/* Page paper backgrounds (hidden in scroll mode, virtualized) */}
+        {!isScrollMode && Array.from({ length: visualPageCount }).map((_, i) => {
+          if (i < visiblePageRange[0] || i > visiblePageRange[1]) return null
+          return (
+            <div
+              key={`emb-page-${i}`}
+              style={{
+                position: "absolute",
+                top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX),
+                left: 0,
+                width: "100%",
+                height: SCREENPLAY_PAGE_HEIGHT_PX,
+                backgroundColor: focusMode ? "rgba(0,0,0,0.35)" : appTheme === "architect" ? colors.surfaceBg : paperTheme.bg,
+                borderRadius: focusMode ? 8 : 3,
+                border: focusMode ? "none" : appTheme === "architect" ? `1px solid ${colors.border}` : `1px solid ${paperTheme.bg === "#FFFFFF" ? "#E5E0DB" : "transparent"}`,
+                boxShadow: focusMode ? "0 0 60px rgba(0,0,0,0.4)" : appTheme === "architect" ? colors.shadow : "0 8px 60px rgba(0,0,0,0.4)",
+                pointerEvents: "none",
+                willChange: "transform",
+                contain: "layout paint",
+              }}
+            />
+          )
+        })}
 
-        {/* Page numbers (hidden in focus mode and scroll mode) */}
-        {!focusMode && !isScrollMode && visualPageCount > 1 && Array.from({ length: visualPageCount }).map((_, i) => (
-          <div
-            key={`emb-pgnum-${i}`}
-            style={{
-              position: "absolute",
-              top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX) + SCREENPLAY_PAGE_PADDING_TOP_PX * 0.35,
-              right: SCREENPLAY_PAGE_PADDING_RIGHT_PX * 0.5,
-              fontSize: 11,
-              color: paperTheme.bg === "#FFFFFF" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
-              pointerEvents: "none",
-              zIndex: 2,
-              fontFamily: "'Courier Prime', monospace",
-            }}
-          >
-            {i + 1}.
-          </div>
-        ))}
+        {/* Page numbers (hidden in focus mode and scroll mode, virtualized) */}
+        {!focusMode && !isScrollMode && visualPageCount > 1 && Array.from({ length: visualPageCount }).map((_, i) => {
+          if (i < visiblePageRange[0] || i > visiblePageRange[1]) return null
+          return (
+            <div
+              key={`emb-pgnum-${i}`}
+              style={{
+                position: "absolute",
+                top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX) + SCREENPLAY_PAGE_PADDING_TOP_PX * 0.35,
+                right: SCREENPLAY_PAGE_PADDING_RIGHT_PX * 0.5,
+                fontSize: 11,
+                color: paperTheme.bg === "#FFFFFF" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)",
+                pointerEvents: "none",
+                zIndex: 2,
+                fontFamily: "'Courier Prime', monospace",
+              }}
+            >
+              {i + 1}.
+            </div>
+          )
+        })}
 
         <Slate key={resetKey} editor={editor} initialValue={initialValue} onChange={handleChange}>
           <Editable
@@ -1652,13 +1700,12 @@ const SlateScreenplayEditor = forwardRef<
             ref={standaloneScrollRef}
             className="relative h-full w-full overflow-auto"
             style={{
-              backgroundColor: focusMode ? "rgba(10,11,16,0.65)" : "transparent",
+              backgroundColor: focusMode ? "rgba(10,11,16,0.85)" : "transparent",
               borderRadius: undefined,
               border: undefined,
               width: focusMode ? 700 : undefined,
               maxWidth: focusMode ? "calc(100vw - 48px)" : undefined,
               margin: focusMode ? "0 auto" : undefined,
-              backdropFilter: focusMode ? "blur(12px)" : undefined,
             }}
           >
             <ScreenplayTopInfo
@@ -1686,8 +1733,9 @@ const SlateScreenplayEditor = forwardRef<
                   : visualPageCount * SCREENPLAY_PAGE_HEIGHT_PX * zoomScale + (visualPageCount - 1) * SCREENPLAY_PAGE_GAP_PX * zoomScale,
               }}
             >
-              {/* Page paper backgrounds (hidden in scroll mode) */}
+              {/* Page paper backgrounds (hidden in scroll mode, virtualized) */}
               {viewMode !== "scroll" && Array.from({ length: visualPageCount }).map((_, i) => {
+                if (i < visiblePageRange[0] || i > visiblePageRange[1]) return null
                 const pageH = SCREENPLAY_PAGE_HEIGHT_PX * zoomScale
                 const gapH = SCREENPLAY_PAGE_GAP_PX * zoomScale
 
@@ -1704,29 +1752,34 @@ const SlateScreenplayEditor = forwardRef<
                       boxShadow: isDark ? "none" : "0 2px 8px rgba(0,0,0,0.12)",
                       borderRadius: 0,
                       pointerEvents: "none",
+                      willChange: "transform",
+                      contain: "layout paint",
                     }}
                   />
                 )
               })}
 
-              {/* Page numbers (hidden in scroll mode) */}
-              {viewMode !== "scroll" && visualPageCount > 1 && Array.from({ length: visualPageCount }).map((_, i) => (
-                <div
-                  key={`pgnum-${i}`}
-                  style={{
-                    position: "absolute",
-                    top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX) * zoomScale + SCREENPLAY_PAGE_PADDING_TOP_PX * zoomScale * 0.35,
-                    right: SCREENPLAY_PAGE_PADDING_RIGHT_PX * zoomScale * 0.5,
-                    fontSize: 11 * zoomScale,
-                    color: colors.muted,
-                    pointerEvents: "none",
-                    zIndex: 2,
-                    fontFamily: "'Courier Prime', monospace",
-                  }}
-                >
-                  {i + 1}.
-                </div>
-              ))}
+              {/* Page numbers (hidden in scroll mode, virtualized) */}
+              {viewMode !== "scroll" && visualPageCount > 1 && Array.from({ length: visualPageCount }).map((_, i) => {
+                if (i < visiblePageRange[0] || i > visiblePageRange[1]) return null
+                return (
+                  <div
+                    key={`pgnum-${i}`}
+                    style={{
+                      position: "absolute",
+                      top: i * (SCREENPLAY_PAGE_HEIGHT_PX + SCREENPLAY_PAGE_GAP_PX) * zoomScale + SCREENPLAY_PAGE_PADDING_TOP_PX * zoomScale * 0.35,
+                      right: SCREENPLAY_PAGE_PADDING_RIGHT_PX * zoomScale * 0.5,
+                      fontSize: 11 * zoomScale,
+                      color: colors.muted,
+                      pointerEvents: "none",
+                      zIndex: 2,
+                      fontFamily: "'Courier Prime', monospace",
+                    }}
+                  >
+                    {i + 1}.
+                  </div>
+                )
+              })}
 
               {/* Slate editor */}
               <Slate key={resetKey} editor={editor} initialValue={initialValue} onChange={handleChange}>

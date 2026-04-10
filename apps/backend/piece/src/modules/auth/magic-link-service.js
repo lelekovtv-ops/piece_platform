@@ -4,6 +4,7 @@ import { getGlobalSystemCollection } from '@piece/multitenancy';
 import { mongoIdUtils } from '@piece/validation/mongo';
 import { createComponentLogger } from '../../utils/logger.js';
 import { config } from '../../config.js';
+import { teamService } from '../teams/service.js';
 
 const componentLogger = createComponentLogger('MagicLinkService');
 
@@ -43,7 +44,7 @@ export async function sendMagicLinkEmail(email, magicUrl) {
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
-        <h2 style="color: #fff; margin-bottom: 8px;">Sign in to KOZA Studio</h2>
+        <h2 style="color: #fff; margin-bottom: 8px;">Sign in to Piece</h2>
         <p style="color: #999; margin-bottom: 32px;">Click the button below to sign in. This link expires in 15 minutes.</p>
         <a href="${magicUrl}" style="display: inline-block; background: #7c3aed; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
           Sign In
@@ -53,7 +54,7 @@ export async function sendMagicLinkEmail(email, magicUrl) {
       </div>
     `;
 
-    await sendEmail(email, 'Sign in to KOZA Studio', html);
+    await sendEmail(email, 'Sign in to Piece', html);
     componentLogger.info('Magic link email sent', { email });
   } catch (err) {
     componentLogger.error('Failed to send magic link email', { email, error: err.message });
@@ -84,7 +85,16 @@ export async function verifyMagicLink(token) {
       updatedAt: now,
     });
     user = await users.findOne({ _id: result.insertedId });
-    componentLogger.info('User auto-created via magic link', { email, userId: mongoIdUtils.toApiString(user._id) });
+    const userId = mongoIdUtils.toApiString(user._id);
+    componentLogger.info('User auto-created via magic link', { email, userId });
+
+    try {
+      const teamName = `${email.split('@')[0]}'s Team`;
+      await teamService.create({ name: teamName, ownerId: userId });
+      componentLogger.info('Personal team created for magic link user', { userId });
+    } catch (teamErr) {
+      componentLogger.warn('Failed to create team for magic link user', { userId, error: teamErr.message });
+    }
   } else if (!user.emailVerified) {
     await users.updateOne({ _id: user._id }, { $set: { emailVerified: true, updatedAt: new Date() } });
     user.emailVerified = true;

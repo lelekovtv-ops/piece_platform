@@ -350,7 +350,7 @@ async function readStream(response: Response): Promise<string> {
 }
 
 /** Ordered fallback chain: try primary model, then alternatives */
-const FALLBACK_MODELS = ["claude-sonnet-4-20250514", "gpt-4o", "gemini-2.0-flash"]
+const FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro"]
 
 async function callLLM(
   parts: string[],

@@ -5,6 +5,7 @@ const componentLogger = createComponentLogger('RateLimiter');
 
 const memoryStore = new Map();
 const MEMORY_CLEANUP_INTERVAL_MS = 60_000;
+const MEMORY_MAP_SIZE_LIMIT = 10_000;
 
 setInterval(() => {
   const now = Date.now();
@@ -57,6 +58,10 @@ export function createRateLimiter({ maxRequests = 100, windowSeconds = 60 } = {}
     const entry = memoryStore.get(key);
 
     if (!entry || entry.expiresAt <= now) {
+      if (memoryStore.size >= MEMORY_MAP_SIZE_LIMIT) {
+        const oldestKey = memoryStore.keys().next().value;
+        memoryStore.delete(oldestKey);
+      }
       memoryStore.set(key, { count: 1, expiresAt: now + windowSeconds * 1000 });
       return next();
     }

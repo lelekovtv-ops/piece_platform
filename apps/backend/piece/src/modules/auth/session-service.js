@@ -26,13 +26,35 @@ function parseUserAgent(userAgentString) {
   };
 }
 
+const MAX_SESSIONS_PER_USER = 10;
+
 async function createSession(userId, tokenHash, { ip, userAgent }) {
   const sessions = getSessionsCollection();
   const deviceInfo = parseUserAgent(userAgent);
   const now = new Date();
 
+  const userObjectId = mongoIdUtils.toObjectId(userId);
+  const activeCount = await sessions.countDocuments({ userId: userObjectId, revokedAt: null });
+
+  if (activeCount >= MAX_SESSIONS_PER_USER) {
+    const oldest = await sessions.findOne(
+      { userId: userObjectId, revokedAt: null },
+      { sort: { lastActiveAt: 1 } },
+    );
+    if (oldest) {
+      await sessions.updateOne(
+        { _id: oldest._id },
+        { $set: { revokedAt: now } },
+      );
+      componentLogger.info('Oldest session revoked (max sessions reached)', {
+        userId,
+        revokedSessionId: mongoIdUtils.toApiString(oldest._id),
+      });
+    }
+  }
+
   const result = await sessions.insertOne({
-    userId: mongoIdUtils.toObjectId(userId),
+    userId: userObjectId,
     refreshTokenHash: tokenHash,
     deviceInfo,
     ip: ip || 'unknown',

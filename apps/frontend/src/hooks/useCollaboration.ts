@@ -13,6 +13,7 @@ import { useCollaborationStore } from "@/store/collaboration"
 import { useProjectsStore } from "@/store/projects"
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000]
+const MAX_RECONNECT_ATTEMPTS = 10
 
 export function useCollaboration() {
   const { user, isAuthenticated } = useAuthStore()
@@ -35,7 +36,12 @@ export function useCollaboration() {
   const scheduleReconnect = useCallback(() => {
     if (reconnectTimerRef.current) return
     const attempt = reconnectAttemptRef.current
-    const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)]
+    if (attempt >= MAX_RECONNECT_ATTEMPTS) {
+      setConnectionState(false, false)
+      return
+    }
+    const baseDelay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)]
+    const delay = Math.round(baseDelay * (0.5 + Math.random() * 0.5))
     reconnectAttemptRef.current = attempt + 1
 
     reconnectTimerRef.current = setTimeout(() => {

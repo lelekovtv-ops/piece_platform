@@ -1,4 +1,3 @@
-import crypto from 'node:crypto';
 import { authService } from './service.js';
 import { sessionService } from './session-service.js';
 import { auditService } from './audit-service.js';
@@ -9,16 +8,14 @@ import { createAccountLockout } from '@piece/cache/accountLockout';
 import { createResendLimiter } from '@piece/cache/resendLimiter';
 import { getRedisClient } from '@piece/cache';
 import { createComponentLogger } from '../../utils/logger.js';
+import { generateCsrfToken, setCsrfCookie } from '../../middleware/csrf.js';
 import { config } from '../../config.js';
+import { hashToken } from './utils.js';
 
 const componentLogger = createComponentLogger('AuthController');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PASSWORD_MIN_LENGTH = 8;
-
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
 
 function getRequestMeta(req) {
   return { ip: req.ip, userAgent: req.headers['user-agent'] || '' };
@@ -30,9 +27,10 @@ function setRefreshTokenCookie(res, refreshToken) {
     httpOnly: true,
     secure: config.get('NODE_ENV') === 'production',
     sameSite: 'lax',
-    path: '/',
+    path: '/v1/auth',
     maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   });
+  res.clearCookie('piece_rt', { path: '/' });
 }
 
 function clearRefreshTokenCookie(res) {
@@ -40,16 +38,27 @@ function clearRefreshTokenCookie(res) {
     httpOnly: true,
     secure: config.get('NODE_ENV') === 'production',
     sameSite: 'lax',
-    path: '/',
+    path: '/v1/auth',
   });
+  res.clearCookie('piece_rt', { path: '/' });
 }
 
 let _lockout = null;
 let _magicLinkLimiter = null;
+let _verificationLimiter = null;
+let _resetLimiter = null;
 
 const MEMORY_LOCKOUT_MAX = 5;
 const MEMORY_LOCKOUT_TTL_MS = 900_000;
+const MEMORY_MAP_SIZE_LIMIT = 10_000;
 const memoryLockout = new Map();
+
+function enforceMapSizeLimit(map) {
+  if (map.size >= MEMORY_MAP_SIZE_LIMIT) {
+    const oldestKey = map.keys().next().value;
+    map.delete(oldestKey);
+  }
+}
 
 function getLockout() {
   if (!_lockout) {
@@ -74,6 +83,7 @@ function getMemoryLockoutEntry(email) {
 
 function recordMemoryFailedAttempt(email) {
   const key = email.toLowerCase();
+  enforceMapSizeLimit(memoryLockout);
   const entry = memoryLockout.get(key) || { count: 0, expiresAt: Date.now() + MEMORY_LOCKOUT_TTL_MS };
   entry.count += 1;
   entry.expiresAt = Date.now() + MEMORY_LOCKOUT_TTL_MS;
@@ -92,6 +102,26 @@ function getMagicLinkLimiter() {
     }
   }
   return _magicLinkLimiter;
+}
+
+function getVerificationLimiter() {
+  if (!_verificationLimiter) {
+    const redis = getRedisClient();
+    if (redis) {
+      _verificationLimiter = createResendLimiter(redis, { maxPerDay: 5, prefix: 'verify' });
+    }
+  }
+  return _verificationLimiter;
+}
+
+function getResetLimiter() {
+  if (!_resetLimiter) {
+    const redis = getRedisClient();
+    if (redis) {
+      _resetLimiter = createResendLimiter(redis, { maxPerDay: 5, prefix: 'pwd-reset' });
+    }
+  }
+  return _resetLimiter;
 }
 
 async function register(req, res) {
@@ -133,10 +163,19 @@ async function register(req, res) {
     await sessionService.createSession(result.user.id, hashToken(result.refreshToken), meta);
     auditService.logAuthEvent(auditService.AUTH_EVENTS.REGISTER, { userId: result.user.id, email: email.toLowerCase(), ...meta });
     setRefreshTokenCookie(res, result.refreshToken);
+    setCsrfCookie(res, generateCsrfToken());
+
+    if (config.get('DISABLE_EMAIL_SENDING') !== 'true') {
+      authService.generateAndSendVerificationEmail(result.user.id, email.toLowerCase()).catch((err) => {
+        componentLogger.warn('Failed to send verification email on register', { error: err.message });
+      });
+    }
+
     res.status(201).json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     if (error.code === 'EMAIL_TAKEN') {
-      return res.status(409).json({ error: 'CONFLICT', message: error.message });
+      componentLogger.info('Registration attempt with existing email', { email: req.body?.email?.toLowerCase() });
+      return res.status(201).json({ user: { email: req.body.email.toLowerCase() }, accessToken: null });
     }
     if (error.code === 'WEAK_PASSWORD') {
       return res.status(400).json({ error: 'VALIDATION_ERROR', message: error.message });
@@ -204,6 +243,7 @@ async function login(req, res) {
     auditService.logAuthEvent(auditService.AUTH_EVENTS.LOGIN_SUCCESS, { userId: result.user.id, email, ...meta });
     clearSuspiciousTracking(email).catch(() => {});
     setRefreshTokenCookie(res, result.refreshToken);
+    setCsrfCookie(res, generateCsrfToken());
     res.json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Login failed', { error: error.message });
@@ -233,6 +273,7 @@ async function refresh(req, res) {
     await sessionService.updateSessionTokenHash(oldTokenHash, newTokenHash).catch(() => {});
 
     setRefreshTokenCookie(res, result.refreshToken);
+    setCsrfCookie(res, generateCsrfToken());
     res.json({ accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Token refresh failed', { error: error.message });
@@ -244,6 +285,22 @@ async function logout(req, res) {
   try {
     const refreshToken = req.cookies?.piece_rt || req.body?.refreshToken;
     await authService.logout(refreshToken);
+
+    if (req.user?.jti && req.user?.exp) {
+      try {
+        const { getTokenBlacklist } = await import('../../index.js');
+        const blacklist = getTokenBlacklist();
+        if (blacklist) {
+          const remainingTtl = Math.max(0, req.user.exp - Math.floor(Date.now() / 1000));
+          if (remainingTtl > 0) {
+            await blacklist.blacklist(req.user.jti, remainingTtl);
+          }
+        }
+      } catch {
+        componentLogger.warn('Failed to blacklist access token on logout');
+      }
+    }
+
     clearRefreshTokenCookie(res);
     auditService.logAuthEvent(auditService.AUTH_EVENTS.LOGOUT, { userId: req.user?.id, ...getRequestMeta(req) });
     res.json({ message: 'Logged out successfully' });
@@ -348,6 +405,7 @@ async function verifyMagicToken(req, res) {
     await sessionService.createSession(result.user.id, hashToken(result.refreshToken), meta);
     auditService.logAuthEvent(auditService.AUTH_EVENTS.MAGIC_LINK_VERIFIED, { userId: result.user.id, email: user.email, ...meta });
     setRefreshTokenCookie(res, result.refreshToken);
+    setCsrfCookie(res, generateCsrfToken());
     res.json({ user: result.user, accessToken: result.accessToken });
   } catch (error) {
     componentLogger.error('Magic link verification failed', { error: error.message });
@@ -370,7 +428,9 @@ async function changePassword(req, res) {
       return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Invalid input data', details });
     }
 
-    await authService.changePassword(req.user.id, currentPassword, newPassword);
+    const currentRefreshToken = req.cookies?.piece_rt;
+    const currentTokenHash = currentRefreshToken ? hashToken(currentRefreshToken) : null;
+    await authService.changePassword(req.user.id, currentPassword, newPassword, currentTokenHash);
     componentLogger.info('Password changed', { userId: req.user.id });
     auditService.logAuthEvent(auditService.AUTH_EVENTS.PASSWORD_CHANGE, { userId: req.user.id, ...getRequestMeta(req) });
     res.json({ message: 'Password changed successfully' });
@@ -509,6 +569,128 @@ async function getUserAuditLog(req, res) {
   }
 }
 
+async function sendVerificationEmail(req, res) {
+  try {
+    const limiter = getVerificationLimiter();
+    if (limiter) {
+      const { allowed } = await limiter.canResend(req.user.email || req.user.id);
+      if (!allowed) {
+        return res.status(429).json({ error: 'RATE_LIMIT_EXCEEDED', message: 'Too many verification requests. Try again later.' });
+      }
+    }
+
+    const result = await authService.generateEmailVerificationToken(req.user.id);
+
+    if (result.alreadyVerified) {
+      return res.json({ message: 'Email is already verified' });
+    }
+
+    try {
+      await authService.sendVerificationEmail(result.email, result.url);
+    } catch {
+      componentLogger.warn('Verification email send failed, URL available in logs', { email: result.email });
+    }
+
+    if (limiter) {
+      await limiter.recordResend(req.user.email || req.user.id);
+    }
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.EMAIL_VERIFICATION_SENT, { userId: req.user.id, email: result.email, ...getRequestMeta(req) });
+
+    const isDev = config.get('NODE_ENV') === 'development';
+    const response = { message: 'Verification email sent' };
+    if (isDev) {
+      response.devUrl = result.url;
+    }
+
+    res.json(response);
+  } catch (error) {
+    if (error.code === 'USER_NOT_FOUND') {
+      return res.status(404).json({ error: 'NOT_FOUND', message: error.message });
+    }
+    componentLogger.error('Failed to send verification email', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to send verification email' });
+  }
+}
+
+async function verifyEmail(req, res) {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Token is required' });
+    }
+
+    const result = await authService.verifyEmailToken(token);
+    if (!result) {
+      return res.status(400).json({ error: 'INVALID_TOKEN', message: 'Verification link is invalid or expired' });
+    }
+
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.EMAIL_VERIFIED, { userId: result.userId, email: result.email, ...getRequestMeta(req) });
+    res.json({ message: 'Email verified successfully', verified: true });
+  } catch (error) {
+    componentLogger.error('Email verification failed', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Email verification failed' });
+  }
+}
+
+async function requestPasswordReset(req, res) {
+  try {
+    const { email } = req.body;
+
+    if (!email || !EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Valid email is required' });
+    }
+
+    const limiter = getResetLimiter();
+    if (limiter) {
+      const { allowed } = await limiter.canResend(email.toLowerCase());
+      if (!allowed) {
+        return res.json({ message: 'If that email is registered, a reset link has been sent' });
+      }
+      await limiter.recordResend(email.toLowerCase());
+    }
+
+    await authService.requestPasswordReset(email);
+
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.PASSWORD_RESET_REQUESTED, { email: email.toLowerCase(), ...getRequestMeta(req) });
+    res.json({ message: 'If that email is registered, a reset link has been sent' });
+  } catch (error) {
+    componentLogger.error('Password reset request failed', { error: error.message });
+    res.json({ message: 'If that email is registered, a reset link has been sent' });
+  }
+}
+
+async function confirmPasswordReset(req, res) {
+  try {
+    const { token, newPassword } = req.body;
+
+    const details = [];
+    if (!token) details.push('Field "token" is required');
+    if (!newPassword) details.push('Field "newPassword" is required');
+    if (newPassword && newPassword.length < PASSWORD_MIN_LENGTH) {
+      details.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    }
+
+    if (details.length > 0) {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: 'Invalid input data', details });
+    }
+
+    const resetResult = await authService.confirmPasswordReset(token, newPassword);
+
+    auditService.logAuthEvent(auditService.AUTH_EVENTS.PASSWORD_RESET_CONFIRMED, { userId: resetResult.userId, ...getRequestMeta(req) });
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    if (error.code === 'INVALID_TOKEN') {
+      return res.status(400).json({ error: 'INVALID_TOKEN', message: error.message });
+    }
+    if (error.code === 'WEAK_PASSWORD') {
+      return res.status(400).json({ error: 'VALIDATION_ERROR', message: error.message });
+    }
+    componentLogger.error('Password reset confirmation failed', { error: error.message });
+    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Password reset failed' });
+  }
+}
+
 export const authController = {
   register,
   login,
@@ -523,4 +705,8 @@ export const authController = {
   revokeAllOtherSessions,
   getAuditLog,
   getUserAuditLog,
+  sendVerificationEmail,
+  verifyEmail,
+  requestPasswordReset,
+  confirmPasswordReset,
 };

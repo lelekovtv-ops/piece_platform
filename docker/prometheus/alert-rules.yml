@@ -1,0 +1,116 @@
+groups:
+  - name: service_health
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.instance }} has been unreachable for more than 2 minutes."
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+            /
+            sum(rate(http_requests_total[5m])) by (job)
+          ) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.job }}"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: HighLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, job)) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p99 latency on {{ $labels.job }}"
+          description: "p99 latency is {{ $value }}s, threshold is 5s."
+
+  - name: infrastructure
+    rules:
+      - alert: HighDiskUsage
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) > 0.80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage above 80%"
+          description: "Root filesystem is {{ $value | humanizePercentage }} full."
+
+      - alert: CriticalDiskUsage
+        expr: |
+          (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk usage above 90%"
+          description: "Root filesystem is {{ $value | humanizePercentage }} full. Immediate action required."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - node_memory_AvailableBytes / node_memory_MemTotal_bytes) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on host"
+          description: "Memory usage is {{ $value | humanizePercentage }}."
+
+      - alert: HighCpuUsage
+        expr: |
+          100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on host"
+          description: "CPU usage is {{ $value }}%."
+
+  - name: database
+    rules:
+      - alert: MongoDBDown
+        expr: up{job="piece-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service (MongoDB dependent) is down"
+          description: "piece-backend has been down for more than 1 minute."
+
+      - alert: RedisDown
+        expr: up{job="piece-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend service (Redis dependent) is down"
+
+  - name: websocket
+    rules:
+      - alert: WebSocketGatewayDown
+        expr: up{job="websocket-gateway"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WebSocket gateway is down"
+          description: "websocket-gateway has been unreachable for more than 2 minutes."
+
+      - alert: HighWebSocketConnections
+        expr: ws_connections_active > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High number of active WebSocket connections"
+          description: "{{ $value }} active connections."

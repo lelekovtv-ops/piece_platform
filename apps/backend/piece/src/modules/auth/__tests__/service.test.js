@@ -3,6 +3,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 vi.mock('@piece/multitenancy', () => {
   const mockCollection = {
     findOne: vi.fn(),
+    findOneAndUpdate: vi.fn(),
     insertOne: vi.fn(),
     deleteOne: vi.fn(),
     deleteMany: vi.fn(),
@@ -249,7 +250,7 @@ describe('AuthService', () => {
       mockCollection.findOne
         .mockResolvedValueOnce({ tokenHash: 'hashed-token', userId: 'user-id' })
         .mockResolvedValueOnce({ _id: 'user-id', email: 'test@example.com' });
-      mockCollection.updateOne = vi.fn().mockResolvedValueOnce({ modifiedCount: 1 });
+      mockCollection.findOneAndUpdate.mockResolvedValueOnce({ tokenHash: 'new-hash', userId: 'user-id' });
 
       const result = await authService.refreshAccessToken('valid-token');
 

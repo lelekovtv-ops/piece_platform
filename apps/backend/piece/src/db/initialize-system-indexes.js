@@ -26,6 +26,7 @@ export async function initializeSystemIndexes() {
   await authSessions.createIndex({ userId: 1, revokedAt: 1 });
   await authSessions.createIndex({ refreshTokenHash: 1 });
   await authSessions.createIndex({ lastActiveAt: -1 });
+  await authSessions.createIndex({ revokedAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60, partialFilterExpression: { revokedAt: { $type: 'date' } } });
 
   const authAuditLog = getGlobalSystemCollection('auth_audit_log');
   await authAuditLog.createIndex({ userId: 1, createdAt: -1 });

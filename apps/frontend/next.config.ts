@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4030";
+
 const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
@@ -8,6 +10,22 @@ const nextConfig: NextConfig = {
     turbopackFileSystemCacheForDev: false,
   },
   serverExternalPackages: [],
+  async rewrites() {
+    return [
+      {
+        source: "/v1/:path*",
+        destination: `${API_BASE}/v1/:path*`,
+      },
+      {
+        source: "/internal/:path*",
+        destination: `${API_BASE}/internal/:path*`,
+      },
+      {
+        source: "/health",
+        destination: `${API_BASE}/health`,
+      },
+    ];
+  },
   images: {
     // All image URLs are relative (/img/*, /storage/*) — served via nginx proxy
     // Custom loader handles imagor URL passthrough (no server-side optimization needed)

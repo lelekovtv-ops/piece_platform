@@ -59,7 +59,7 @@ cat mongodb-YYYY-MM-DD.archive.gz | docker compose exec -T mongodb \
 
 ## Redis Backup
 
-Redis uses RDB snapshots (configured in docker-compose.yml with `--save 60 1000`).
+Redis uses AOF persistence (`--appendonly yes`). RDB snapshots are triggered manually via `BGSAVE` in the backup script. The `--save` flag is NOT configured in docker-compose.yml — AOF is the primary persistence mechanism.
 
 ```bash
 #!/bin/bash
