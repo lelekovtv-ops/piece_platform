@@ -5,19 +5,20 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useThemeStore } from "@/store/theme"
 import { useScreenplaySettings } from "@/store/screenplaySettings"
+import { useAuthStore } from "@/lib/auth/auth-store"
 import { UserMenu } from "./UserMenu"
 import { OnlineUsers } from "./OnlineUsers"
 
 const NAV_ITEMS = [
   { id: "media", href: "/library", label: "MEDIA" },
   { id: "board", href: "/board", label: "DESKTOP" },
-  { id: "script", href: "/", label: "SCRIPTWRITER" },
+  { id: "script", href: "/projects", label: "SCRIPTWRITER" },
   { id: "workspace", href: "/workspace", label: "BREAKDOWN STUDIO" },
   { id: "export", href: "/export", label: "EXPORT" },
 ]
 
 function isActive(pathname: string, item: (typeof NAV_ITEMS)[number]): boolean {
-  if (item.id === "script") return pathname === "/" || pathname === "/projects"
+  if (item.id === "script") return pathname === "/projects" || pathname === "/scriptwriter"
   return pathname.startsWith(item.href) && item.href !== "/"
 }
 
@@ -146,6 +147,7 @@ function GlobalNavInner() {
   const pathname = usePathname()
   const theme = useThemeStore((s) => s.theme)
   const focusMode = useScreenplaySettings((s) => s.focusMode)
+  const user = useAuthStore((s) => s.user)
   const s = THEME_STYLES[theme]
 
   if (focusMode || pathname === "/home" || pathname === "/login") return null
@@ -250,8 +252,13 @@ function GlobalNavInner() {
 
       <Divider />
 
-      {/* Theme toggle + Online users + User menu */}
+      {/* User email + Theme toggle + Online users + User menu */}
       <div className="flex items-center gap-2 pr-4">
+        {user && (
+          <span className="hidden xl:block max-w-[180px] truncate text-[11px] text-white/25">
+            {user.email}
+          </span>
+        )}
         <OnlineUsers />
         <ThemeToggle />
         <UserMenu />

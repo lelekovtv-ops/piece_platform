@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-
-const PUBLIC_ROUTES = ["/login", "/healthz", "/home", "/auth/verify"]
+import { PUBLIC_ROUTES } from "@/lib/auth/public-routes"
 
 const PUBLIC_PREFIXES = ["/_next/", "/api/", "/favicon.ico"]
 
@@ -21,7 +20,7 @@ export function middleware(request: NextRequest) {
 
   const hasRefreshToken = request.cookies.has("piece_rt")
 
-  if (!hasRefreshToken && process.env.NODE_ENV !== "development") {
+  if (!hasRefreshToken) {
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("redirect", pathname)
     return NextResponse.redirect(loginUrl)

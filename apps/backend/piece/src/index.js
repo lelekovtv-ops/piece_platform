@@ -33,27 +33,50 @@ import { registerSettingsRoutes } from './modules/settings/routes.js';
 import { registerTranslateRoutes } from './modules/translate/routes.js';
 import { registerKozaToolsRoutes } from './modules/koza-tools/routes.js';
 import { createRateLimiter } from './middleware/rate-limiter.js';
+import { createCsrfMiddleware } from './middleware/csrf.js';
 import { buildPrometheusMetrics } from './middleware/prometheus-metrics.js';
 
 const componentLogger = createComponentLogger('Application');
 
 let _authMiddleware = null;
+let _tokenBlacklist = null;
+
+export function getTokenBlacklist() {
+  return _tokenBlacklist;
+}
 
 const setupApp = () => {
   const app = express();
   const PORT = config.get('PORT');
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:', '*.amazonaws.com'],
+        connectSrc: ["'self'", 'wss:', 'ws:'],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+  }));
   app.use(corsMiddleware);
   app.use(cookieParser());
   app.use(express.json({ limit: '10mb' }));
   app.use(createRequestLoggingMiddleware(logger));
   app.use(createRateLimiter({ maxRequests: 100, windowSeconds: 60 }));
+  app.use(createCsrfMiddleware());
 
   let backgroundServicesReady = false;
 
-  app.get('/health', async (req, res) => {
-    const checks = { mongodb: 'unknown', redis: 'unknown' };
+  const runHealthChecks = async () => {
+    const checks = { mongodb: 'unknown', redis: 'unknown', nats: 'unknown' };
 
     try {
       const { getSystemDb } = await import('@piece/multitenancy');
@@ -81,11 +104,49 @@ const setupApp = () => {
       checks.redis = 'disconnected';
     }
 
+    try {
+      const { getNatsClient } = await import('@piece/pubsub');
+      const nats = getNatsClient();
+      if (nats) {
+        checks.nats = nats.isClosed() ? 'disconnected' : 'connected';
+      } else {
+        checks.nats = 'not initialized';
+      }
+    } catch {
+      checks.nats = 'disconnected';
+    }
+
+    return checks;
+  };
+
+  app.get('/health/live', (req, res) => {
+    res.json({ status: 'alive', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/health/ready', async (req, res) => {
+    if (!backgroundServicesReady) {
+      return res.status(503).json({
+        status: 'not ready',
+        message: 'Background services still initializing',
+      });
+    }
+    const checks = await runHealthChecks();
+    const allHealthy = checks.mongodb === 'connected' && checks.redis === 'connected';
+    res.status(allHealthy ? 200 : 503).json({
+      status: allHealthy ? 'ready' : 'degraded',
+      checks,
+    });
+  });
+
+  app.get('/health', async (req, res) => {
+    const checks = await runHealthChecks();
     const allHealthy = checks.mongodb !== 'disconnected' && checks.redis !== 'disconnected';
 
     res.status(allHealthy ? 200 : 503).json({
       status: allHealthy ? 'healthy' : 'degraded',
       service: config.get('SERVICE_NAME'),
+      version: '0.1.0',
+      uptime: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
       backgroundServices: backgroundServicesReady ? 'ready' : 'initializing',
       checks,
@@ -202,7 +263,8 @@ const initializeBackgroundServices = async () => {
     const { createTokenBlacklist } = await import('@piece/cache/tokenBlacklist');
     const redis = getRedisClient();
     if (redis && _authMiddleware?.setTokenBlacklist) {
-      _authMiddleware.setTokenBlacklist(createTokenBlacklist(redis));
+      _tokenBlacklist = createTokenBlacklist(redis);
+      _authMiddleware.setTokenBlacklist(_tokenBlacklist);
       componentLogger.info('Token blacklist initialized');
     }
   } catch (err) {
@@ -214,6 +276,14 @@ const initializeBackgroundServices = async () => {
     componentLogger.info('NATS PubSub initialized');
   } catch (err) {
     componentLogger.warn('NATS PubSub init failed (non-critical)', { error: err.message });
+  }
+
+  try {
+    const { initializeEmail } = await import('@piece/email');
+    initializeEmail(config);
+    componentLogger.info('Email client initialized');
+  } catch (err) {
+    componentLogger.warn('Email client init failed (non-critical)', { error: err.message });
   }
 
   try {

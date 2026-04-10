@@ -5,12 +5,8 @@ import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { useCollaboration } from "@/hooks/useCollaboration"
 import { useAuthStore } from "@/lib/auth/auth-store"
-
-const PUBLIC_ROUTES = ["/login", "/healthz", "/home", "/"]
-
-function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith(route + "/"))
-}
+import { isPublicRoute } from "@/lib/auth/public-routes"
+import { onAuthMessage, broadcastLogout } from "@/lib/auth/auth-channel"
 
 function CollaborationBridge() {
   useCollaboration()
@@ -29,10 +25,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [initialize])
 
   useEffect(() => {
+    return onAuthMessage((msg) => {
+      if (msg.type === "logout") {
+        useAuthStore.getState().logout().then(() => {
+          router.replace("/login")
+        })
+      } else if (msg.type === "login") {
+        initialize()
+      }
+    })
+  }, [initialize, router])
+
+  useEffect(() => {
     if (isLoading) return
 
     if (!isAuthenticated && !isPublicRoute(pathname)) {
-      router.replace("/login")
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`)
     }
 
     if (isAuthenticated && pathname === "/login") {

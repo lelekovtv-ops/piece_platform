@@ -2,8 +2,14 @@ import { getAccessToken, setAccessToken, refreshApi } from "./auth-client"
 import { API_BASE } from "@/lib/api/endpoints"
 
 const MAX_RETRIES = 2
-const REQUEST_TIMEOUT_MS = 15_000
+const REQUEST_TIMEOUT_MS = 30_000
 const RETRYABLE_STATUSES = new Set([429, 500, 502, 503])
+
+function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null
+  const match = document.cookie.match(/piece_csrf=([^;]+)/)
+  return match ? match[1] : null
+}
 
 let currentTeamId: string | null = null
 
@@ -45,6 +51,13 @@ export async function authFetch(
   if (token) headers.set("Authorization", `Bearer ${token}`)
   if (currentTeamId) headers.set("x-selected-team", currentTeamId)
   headers.set("X-Correlation-ID", generateUUID())
+
+  const method = (options?.method || "GET").toUpperCase()
+  if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
+    const csrf = getCsrfToken()
+    if (csrf) headers.set("X-CSRF-Token", csrf)
+  }
+
   if (
     !headers.has("Content-Type") &&
     options?.body &&
@@ -69,6 +82,7 @@ export async function authFetch(
       res = await fetch(url, {
         ...options,
         headers,
+        credentials: "include",
         signal: combinedSignal,
       })
       clearTimeout(timeoutId)
@@ -78,7 +92,9 @@ export async function authFetch(
         if (r) {
           setAccessToken(r.accessToken)
           headers.set("Authorization", `Bearer ${r.accessToken}`)
-          res = await fetch(url, { ...options, headers, signal: combinedSignal })
+          res = await fetch(url, { ...options, headers, credentials: "include", signal: combinedSignal })
+        } else {
+          setAccessToken(null)
         }
         return res
       }

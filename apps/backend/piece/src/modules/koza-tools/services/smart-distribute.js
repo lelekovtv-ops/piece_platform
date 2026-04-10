@@ -53,13 +53,10 @@ const ResponseSchema = z.object({
 });
 
 export async function smartDistribute({ segments, sections, scriptText }) {
-  const apiKey = config.get('ANTHROPIC_API_KEY');
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
+  const apiKey = config.get('GOOGLE_API_KEY');
+  if (!apiKey) throw new Error('GOOGLE_API_KEY not configured');
 
-  const { generateObject } = await import('ai');
-  const { createAnthropic } = await import('@ai-sdk/anthropic');
-
-  const anthropic = createAnthropic({ apiKey });
+  const { chatCompletion } = await import('../../ai/services/providers.js');
 
   const userPrompt = `Here is the script and its parsed structure. Make creative production decisions for each segment.
 
@@ -80,16 +77,26 @@ ${JSON.stringify(segments.map((s) => ({
     sectionId: s.sectionId,
   })), null, 2)}
 
-Analyze the emotional arc, decide on APIs, write cinematic prompts, choose camera moves. Return enriched jobs.`;
+Analyze the emotional arc, decide on APIs, write cinematic prompts, choose camera moves.
+Return ONLY valid JSON matching this schema (no markdown, no backticks):
+{"directorNote":"...","colorGrade":"...","pacing":"...","jobs":[{"segmentId":"...","type":"tts|video-gen|image-gen|music-gen|sfx|title-card|lipsync","prompt":"...","api":"...","emotionalNote":"...","camera":"...","transitionTo":"..."}]}`;
 
-  const result = await generateObject({
-    model: anthropic('claude-sonnet-4-20250514'),
-    system: SYSTEM,
-    prompt: userPrompt,
-    schema: ResponseSchema,
+  const response = await chatCompletion({
+    provider: 'google',
+    model: 'gemini-2.5-flash-lite',
+    messages: [{ role: 'user', content: userPrompt }],
+    systemPrompt: SYSTEM,
     temperature: 0.7,
+    maxTokens: 8192,
   });
 
-  componentLogger.info('Smart distribution complete', { jobCount: result.object.jobs.length });
-  return result.object;
+  const cleaned = response.content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON found in response');
+
+  const parsed = JSON.parse(match[0]);
+  const validated = ResponseSchema.parse(parsed);
+
+  componentLogger.info('Smart distribution complete', { jobCount: validated.jobs.length });
+  return validated;
 }

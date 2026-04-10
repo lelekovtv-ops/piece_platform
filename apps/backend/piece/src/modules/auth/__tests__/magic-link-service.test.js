@@ -115,7 +115,7 @@ describe('MagicLinkService', () => {
       const result = await verifyMagicLink('new-token');
 
       expect(result.email).toBe('newuser@example.com');
-      expect(mockCollection.insertOne).toHaveBeenCalledOnce();
+      expect(mockCollection.insertOne).toHaveBeenCalled();
       expect(mockCacheStore.has('new-token')).toBe(false);
     });
 

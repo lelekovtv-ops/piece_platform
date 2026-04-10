@@ -32,6 +32,7 @@ export async function generateImage({ prompt, referenceImages = [], size = '1536
   return {
     url: imageData.url || null,
     b64: imageData.b64_json || null,
+    mimeType: 'image/png',
     revisedPrompt: imageData.revised_prompt || prompt,
     provider: 'openai',
   };

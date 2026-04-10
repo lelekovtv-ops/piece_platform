@@ -28,23 +28,21 @@ Rules:
 - Respond with ONLY the intent name, nothing else`;
 
 export async function classifyIntent({ input, system }) {
-  const apiKey = config.get('ANTHROPIC_API_KEY');
+  const apiKey = config.get('GOOGLE_API_KEY');
   if (!apiKey) return 'chat';
 
   try {
-    const { generateText } = await import('ai');
-    const { createAnthropic } = await import('@ai-sdk/anthropic');
+    const { chatCompletion } = await import('../../ai/services/providers.js');
 
-    const anthropic = createAnthropic({ apiKey });
-
-    const { text } = await generateText({
-      model: anthropic('claude-haiku-4-5-20251001'),
-      system: system || DEFAULT_SYSTEM_PROMPT,
+    const response = await chatCompletion({
+      provider: 'google',
       messages: [{ role: 'user', content: input }],
+      systemPrompt: system || DEFAULT_SYSTEM_PROMPT,
       temperature: 0,
+      maxTokens: 50,
     });
 
-    const result = text.trim().toLowerCase().replace(/[^a-z_]/g, '');
+    const result = response.content.trim().toLowerCase().replace(/[^a-z_]/g, '');
     componentLogger.info('Intent classified', { input, result });
     return result;
   } catch (error) {

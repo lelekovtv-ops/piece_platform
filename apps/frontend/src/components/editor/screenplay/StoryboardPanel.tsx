@@ -3,8 +3,8 @@ import { apiChat } from "@/lib/api"
 
 import { SmartImage } from "@/components/ui/SmartImage"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, BookOpen, Camera, ChevronLeft, ChevronRight, Clapperboard, Copy, Crop, Download, Film, FlipHorizontal2, FlipVertical2, Grid, Image as ImageIcon, LayoutPanelLeft, List, Loader2, Maximize, Minimize, MoreHorizontal, Music, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, RotateCw, Settings, SkipBack, SkipForward, Sparkles, Trash2, Video, Volume2, Wand2, X } from "lucide-react"
-import { DirectorMode } from "@/components/director/DirectorMode"
+import { AlertTriangle, BookOpen, Camera, ChevronLeft, ChevronRight, Clapperboard, Copy, Crop, Download, Film, FlipHorizontal2, FlipVertical2, Grid, Image as ImageIcon, List, Loader2, Maximize, Minimize, MoreHorizontal, Music, Pause, Pencil, Play, Plus, RefreshCw, RotateCcw, RotateCw, Settings, SkipBack, SkipForward, Sparkles, Trash2, Video, Volume2, Wand2, X } from "lucide-react"
+
 import { computeSlateNumbers } from "@/lib/shotNumbering"
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { buildBreakdownBibleContext, buildScenePromptDrafts, createSceneTimelineShotsFromBreakdown } from "@/features/breakdown"
@@ -277,7 +277,7 @@ export function StoryboardPanel({
     [selectedSceneId, scenes, scriptBlocks]
   )
   useEffect(() => {
-    if (!(viewMode === "scenes" || viewMode === "director")) return
+    if (viewMode !== "scenes") return
     if (selectedSceneId) return
     if (!scenes[0]) return
 
@@ -1429,7 +1429,7 @@ ${shotText}
     : Math.round(269 + ((cardScale - 72) / 32) * 36)
   const cardGap = isExpanded ? 17 : 14
   const sceneTitle = selectedScene?.title || "Storyboard Workspace"
-  const isDirectorWorkflow = viewMode === "scenes" || viewMode === "director"
+  const isDirectorWorkflow = viewMode === "scenes"
   const isDuoMode = isExpanded && isSplitScreen
   const activeTheme = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null
   const panelChrome = activeTheme === "synthwave"
@@ -1804,14 +1804,6 @@ ${shotText}
             </button>
             <button
               type="button"
-              onClick={() => setViewMode("director")}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.1em] transition-colors whitespace-nowrap ${viewMode === "director" ? "bg-[#D4A853]/15 border border-[#D4A853]/30 text-[#D4A853]" : "text-white/40 hover:text-white/60"}`}
-            >
-              <LayoutPanelLeft size={12} />
-              Director Mode
-            </button>
-            <button
-              type="button"
               onClick={() => setViewMode("board")}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] uppercase tracking-[0.1em] transition-colors whitespace-nowrap ${viewMode === "board" ? "bg-white/8 text-white" : "text-white/40 hover:text-white/60"}`}
             >
@@ -2034,17 +2026,7 @@ ${shotText}
 
         {!isDuoMode ? workspaceChrome : null}
 
-        {/* Director Mode v2 — full replacement when active */}
-        {viewMode === "director" && !isDuoMode && (
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <DirectorMode
-              selectedSceneId={selectedSceneId}
-              onSceneClick={(sceneId) => selectScene(selectedSceneId === sceneId ? null : sceneId)}
-            />
-          </div>
-        )}
-
-        <div className={isDuoMode ? "flex-1 min-h-0 overflow-hidden" : viewMode === "director" ? "hidden" : "flex-1 min-h-0 overflow-y-auto px-5 py-5"} style={isDuoMode ? undefined : { overscrollBehaviorY: "contain" }}>
+        <div className={isDuoMode ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-y-auto px-5 py-5"} style={isDuoMode ? undefined : { overscrollBehaviorY: "contain" }}>
           {isDuoMode ? (
           <div className="flex h-full w-full">
             <div className="shrink-0 overflow-y-auto border-r border-white/8" style={{ width: "33.333%", minWidth: 280, maxWidth: "33.333%" }}>

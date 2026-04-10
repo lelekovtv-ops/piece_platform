@@ -2087,7 +2087,7 @@ Respond in Russian. Current modules:\n${ctx}`,
   const shotCount = storyboardShots.length
 
   return (
-    <div className="flex h-screen bg-[#0A0B0E] text-[#E5E0DB]">
+    <div className="flex h-full bg-[#0A0B0E] text-[#E5E0DB]">
       {/* ── Left toggle ── */}
       {!showLeftPanel && (
         <button type="button" onClick={() => setShowLeftPanel(true)}

@@ -1,9 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { ArrowDownToLine, ArrowLeft, Clipboard, Film, Settings, Trash2 } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Fragment, Suspense, useMemo, useState } from "react"
+import { ArrowDownToLine, Trash2 } from "lucide-react"
+import { Fragment, useMemo, useState } from "react"
 import type { LogEntry, LogEntryType } from "@/store/devlog"
 import { useDevLogStore } from "@/store/devlog"
 
@@ -364,9 +362,6 @@ function LogCard({
 }
 
 function DevConsoleContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const from = searchParams.get("from") || "/"
   const entries = useDevLogStore((state) => state.entries)
   const clear = useDevLogStore((state) => state.clear)
   const enabled = useDevLogStore((state) => state.enabled)
@@ -405,63 +400,12 @@ function DevConsoleContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0E0D0B] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-4 sm:px-6">
+    <main className="h-full text-white">
+      <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-4 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 pb-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => router.push(from)}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-2 text-sm text-white/70 transition hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-            <Link
-              href="/piece"
-              className="inline-flex items-center gap-2 rounded-full border border-violet-500/20 bg-violet-500/8 px-3 py-2 text-sm text-violet-300/70 transition hover:text-violet-300"
-            >
-              <Film className="h-4 w-4" />
-              PIECE
-            </Link>
-            <Link
-              href="/dev/director-pipeline"
-              className="inline-flex items-center gap-2 rounded-full border border-[#4A7C6F]/20 bg-[#4A7C6F]/8 px-3 py-2 text-sm text-[#4A7C6F]/70 transition hover:text-[#4A7C6F]"
-            >
-              <Film className="h-4 w-4" />
-              Director Pipeline
-            </Link>
-            <Link
-              href="/dev/previz-3d"
-              className="inline-flex items-center gap-2 rounded-full border border-[#7C4A6F]/20 bg-[#7C4A6F]/8 px-3 py-2 text-sm text-[#C58DB2]/70 transition hover:text-[#C58DB2]"
-            >
-              <Film className="h-4 w-4" />
-              3D Previz
-            </Link>
-            <Link
-              href="/dev/breakdown-studio"
-              className="inline-flex items-center gap-2 rounded-full border border-[#D4A853]/20 bg-[#D4A853]/8 px-3 py-2 text-sm text-[#E6C887]/70 transition hover:text-[#E6C887]"
-            >
-              <Film className="h-4 w-4" />
-              Breakdown Studio
-            </Link>
-            <Link
-              href="/dev/settings"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/4 px-3 py-2 text-sm text-white/70 transition hover:text-white"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-            <Link
-              href="/production"
-              className="inline-flex items-center gap-2 rounded-full border border-[#D4A853]/20 bg-[#D4A853]/8 px-3 py-2 text-sm text-[#E6C887]/70 transition hover:text-[#E6C887]"
-            >
-              <Clipboard className="h-4 w-4" />
-              Production
-            </Link>
-            <div>
-              <h1 className="text-lg font-semibold tracking-[0.24em] text-white/90">PIECE DEV CONSOLE</h1>
-              <p className="text-xs text-white/35">System breakdown, image generation, prompt and sync logs</p>
-            </div>
+          <div>
+            <h1 className="text-lg font-semibold tracking-[0.24em] text-white/90">PIECE DEV CONSOLE</h1>
+            <p className="text-xs text-white/35">System breakdown, image generation, prompt and sync logs</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -509,7 +453,7 @@ function DevConsoleContent() {
         </div>
 
         <div className="flex-1 overflow-hidden">
-          <div className="h-[calc(100vh-148px)] overflow-y-auto pr-1">
+          <div className="flex-1 overflow-y-auto pr-1">
             {blocks.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-white/10 bg-white/2 px-6 py-10 text-center text-sm text-white/35">
                 No logs yet.
@@ -597,9 +541,5 @@ function DevConsoleContent() {
 }
 
 export default function DevConsolePage() {
-  return (
-    <Suspense fallback={<main className="min-h-screen bg-[#0E0D0B] text-white" />}>
-      <DevConsoleContent />
-    </Suspense>
-  )
+  return <DevConsoleContent />
 }

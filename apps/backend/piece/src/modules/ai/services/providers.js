@@ -45,7 +45,7 @@ export function getConfiguredProviders() {
 export const DEFAULT_MODELS = Object.freeze({
   anthropic: 'claude-sonnet-4-20250514',
   openai: 'gpt-4o',
-  google: 'gemini-2.0-flash',
+  google: 'gemini-2.5-flash-lite',
 });
 
 export async function chatCompletion({ provider, model, messages, systemPrompt, temperature = 0.7, maxTokens = 4096 }) {
@@ -170,6 +170,33 @@ export async function streamChatCompletion({ provider, model, messages, systemPr
       }
 
       return { provider: 'openai' };
+    }
+
+    case 'google': {
+      const client = await getGoogleClient();
+      if (!client) throw new Error('Google API key not configured');
+
+      const contents = messages.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      }));
+
+      const response = await client.models.generateContentStream({
+        model: model || DEFAULT_MODELS.google,
+        contents,
+        config: {
+          temperature,
+          maxOutputTokens: maxTokens,
+          systemInstruction: systemPrompt || undefined,
+        },
+      });
+
+      for await (const chunk of response) {
+        const text = chunk.text;
+        if (text) onChunk(text);
+      }
+
+      return { provider: 'google' };
     }
 
     default:

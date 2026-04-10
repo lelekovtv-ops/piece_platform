@@ -8,6 +8,7 @@ import {
   setAccessToken,
   type AuthUser,
 } from "./auth-client"
+import { broadcastLogout, broadcastLogin } from "./auth-channel"
 import { authFetch, setCurrentTeamId } from "./auth-fetch"
 import { identifyUser, resetAnalytics } from "@/lib/analytics"
 
@@ -69,6 +70,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     setCurrentTeamId(null)
     resetAnalytics()
     set({ user: null, isAuthenticated: false })
+    broadcastLogout()
   },
 }))
 

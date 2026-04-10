@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "next/link"
-import { ArrowLeft, RotateCcw } from "lucide-react"
+import { RotateCcw } from "lucide-react"
 import { useBoardStore } from "@/store/board"
 import { useBreakdownConfigStore } from "@/store/breakdownConfig"
 import { useStoryboardStore } from "@/store/storyboard"
@@ -206,15 +205,9 @@ export default function DevSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0e0e0e] text-white">
+    <div className="h-full overflow-y-auto text-white">
       {/* Header */}
-      <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-white/[0.06] bg-[#0e0e0e]/80 px-6 py-4 backdrop-blur-xl">
-        <Link
-          href="/dev"
-          className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-white/50 transition-colors hover:bg-white/5 hover:text-white/80"
-        >
-          <ArrowLeft size={16} />
-        </Link>
+      <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-white/[0.06] bg-[#0E0D0B]/80 px-6 py-4 backdrop-blur-xl">
         <div>
           <h1 className="text-sm font-medium text-white/90">Developer Settings</h1>
           <p className="text-[11px] text-white/30">Engine configuration &amp; model parameters</p>

@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Version control
+.git/
+.gitignore
+
+# Build artifacts
+.next/
+dist/
+*.tsbuildinfo
+.turbo/
+.nx/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE / editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Documentation and metadata
+docs/
+*.md
+LICENSE
+
+# Tests
+tests/
+**/__tests__/
+**/*.test.js
+**/*.test.ts
+**/*.spec.js
+**/*.spec.ts
+vitest.config.js
+playwright.config.js
+
+# Claude Code config
+.claude/
+
+# CI/CD
+.github/
+
+# Large binary files
+*.wasm
+*.onnx
+*.onnx.metadata
+*.onnx.lock
+
+# OS artifacts
+.DS_Store
+*\ 2.*
+*\ 3.*
+Thumbs.db
+
+# Logs
+*.log
+
+# Storybook
+.storybook/
+**/*.stories.tsx
+**/*.stories.ts
+
+# Temp
+.git-commit-msg.txt
+scripts/*.app/

@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { StorageCleanup } from "@/components/app/StorageCleanup";
-import { DevInspector } from "@/components/app/DevInspector";
-import { GlobalNav } from "@/components/app/GlobalNav";
-import { MainContent } from "@/components/app/MainContent";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { AuthProvider } from "@/components/app/AuthProvider";
-import { LockBanner } from "@/components/app/LockBanner";
 import { AnalyticsProvider } from "@/components/app/AnalyticsProvider";
 import "./globals.css";
 
@@ -31,12 +27,7 @@ export default function RootLayout({
           <AnalyticsProvider />
           <ThemeProvider />
           <StorageCleanup />
-          <GlobalNav />
-          <MainContent>
-            {children}
-          </MainContent>
-          <LockBanner />
-          <DevInspector />
+          {children}
         </AuthProvider>
       </body>
     </html>
