@@ -205,12 +205,10 @@ const setupApp = () => {
       "JWT keys not configured — authenticated routes will reject all requests",
     );
     const rejectAuth = (req, res) => {
-      res
-        .status(401)
-        .json({
-          error: "UNAUTHORIZED",
-          message: "Authentication not configured",
-        });
+      res.status(401).json({
+        error: "UNAUTHORIZED",
+        message: "Authentication not configured",
+      });
     };
     authMiddleware = {
       authenticateToken: rejectAuth,
@@ -262,6 +260,10 @@ const initializeBackgroundServices = async () => {
   const { initializePubSub } = await import("@piece/pubsub");
 
   const mongoUri = config.get("MONGODB_URI");
+  componentLogger.info("Connecting to MongoDB", {
+    uri: mongoUri?.replace(/\/\/[^@]+@/, "//***@"),
+    systemDb: config.get("MONGODB_SYSTEM_DB"),
+  });
   await initializeMultiTenancy(mongoUri, {
     systemDbName: config.get("MONGODB_SYSTEM_DB"),
   });
@@ -345,8 +347,10 @@ const startServer = async () => {
       })
       .catch((error) => {
         componentLogger.error("Failed to initialize background services", {
-          error: error.message,
-          stack: error.stack,
+          error: error?.message || String(error),
+          stack: error?.stack,
+          name: error?.name,
+          code: error?.code,
         });
         process.exit(1);
       });
