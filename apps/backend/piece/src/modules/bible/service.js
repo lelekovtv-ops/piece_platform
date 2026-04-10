@@ -1,14 +1,14 @@
-import { getSystemCollection } from '@piece/multitenancy';
-import { mongoIdUtils } from '@piece/validation/mongo';
-import { createComponentLogger } from '../../utils/logger.js';
+import { getSystemCollection } from "@piece/multitenancy";
+import { mongoIdUtils } from "@piece/validation/mongo";
+import { createComponentLogger } from "../../utils/logger.js";
 
-const componentLogger = createComponentLogger('BibleService');
+const componentLogger = createComponentLogger("BibleService");
 
 function getCollection(teamId, entityType) {
   const collectionMap = {
-    characters: 'bible_characters',
-    locations: 'bible_locations',
-    props: 'bible_props',
+    characters: "bible_characters",
+    locations: "bible_locations",
+    props: "bible_props",
   };
   const name = collectionMap[entityType];
   if (!name) throw new Error(`Unknown bible entity type: ${entityType}`);
@@ -21,7 +21,13 @@ function list(teamId, projectId, entityType) {
     .find({ projectId: mongoIdUtils.toObjectId(projectId) })
     .sort({ name: 1 })
     .toArray()
-    .then((docs) => docs.map((d) => ({ id: mongoIdUtils.toApiString(d._id), ...d, _id: undefined })));
+    .then((docs) =>
+      docs.map((d) => ({
+        id: mongoIdUtils.toApiString(d._id),
+        ...d,
+        _id: undefined,
+      })),
+    );
 }
 
 async function getById(teamId, projectId, entityType, id) {
@@ -43,8 +49,10 @@ async function create(teamId, projectId, entityType, data) {
     name: data.name,
   });
   if (existing) {
-    const error = new Error(`${entityType.slice(0, -1)} with this name already exists`);
-    error.code = 'DUPLICATE_NAME';
+    const error = new Error(
+      `${entityType.slice(0, -1)} with this name already exists`,
+    );
+    error.code = "DUPLICATE_NAME";
     throw error;
   }
 
@@ -56,8 +64,18 @@ async function create(teamId, projectId, entityType, data) {
     updatedAt: now,
   });
 
-  componentLogger.info('Bible entry created', { teamId, projectId, entityType, name: data.name });
-  return { id: mongoIdUtils.toApiString(result.insertedId), ...data, createdAt: now, updatedAt: now };
+  componentLogger.info("Bible entry created", {
+    teamId,
+    projectId,
+    entityType,
+    name: data.name,
+  });
+  return {
+    id: mongoIdUtils.toApiString(result.insertedId),
+    ...data,
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 async function update(teamId, projectId, entityType, id, data) {
@@ -73,23 +91,37 @@ async function update(teamId, projectId, entityType, id, data) {
       _id: { $ne: mongoIdUtils.toObjectId(id) },
     });
     if (existing) {
-      const error = new Error(`${entityType.slice(0, -1)} with this name already exists`);
-      error.code = 'DUPLICATE_NAME';
+      const error = new Error(
+        `${entityType.slice(0, -1)} with this name already exists`,
+      );
+      error.code = "DUPLICATE_NAME";
       throw error;
     }
     $set.name = data.name;
   }
 
   const result = await collection.findOneAndUpdate(
-    { _id: mongoIdUtils.toObjectId(id), projectId: mongoIdUtils.toObjectId(projectId) },
+    {
+      _id: mongoIdUtils.toObjectId(id),
+      projectId: mongoIdUtils.toObjectId(projectId),
+    },
     { $set },
-    { returnDocument: 'after' },
+    { returnDocument: "after" },
   );
 
   if (!result) return null;
 
-  componentLogger.info('Bible entry updated', { teamId, projectId, entityType, id });
-  return { id: mongoIdUtils.toApiString(result._id), ...result, _id: undefined };
+  componentLogger.info("Bible entry updated", {
+    teamId,
+    projectId,
+    entityType,
+    id,
+  });
+  return {
+    id: mongoIdUtils.toApiString(result._id),
+    ...result,
+    _id: undefined,
+  };
 }
 
 async function remove(teamId, projectId, entityType, id) {
@@ -100,7 +132,12 @@ async function remove(teamId, projectId, entityType, id) {
   });
   if (result.deletedCount === 0) return false;
 
-  componentLogger.info('Bible entry deleted', { teamId, projectId, entityType, id });
+  componentLogger.info("Bible entry deleted", {
+    teamId,
+    projectId,
+    entityType,
+    id,
+  });
   return true;
 }
 

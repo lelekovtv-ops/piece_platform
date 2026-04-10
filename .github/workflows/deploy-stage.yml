@@ -121,6 +121,17 @@ jobs:
             echo "Waiting for infrastructure..."
             sleep 10
 
+            # Ensure MongoDB replica set is initialized (idempotent — skips if already done)
+            docker compose up -d mongo-init-replica
+            sleep 5
+
+            # Verify MongoDB replica set
+            echo "=== MongoDB replica set status ==="
+            docker compose exec -T mongodb mongosh --quiet \
+              -u ${MONGO_ROOT_USER:-admin} -p ${MONGO_ROOT_PASSWORD:-changeme} \
+              --authenticationDatabase admin \
+              --eval "printjson(rs.status().ok)" 2>&1 || echo "rs.status() failed"
+
             # Build backend base image (--no-cache ensures code fixes are included)
             docker build --no-cache -f docker/Dockerfile.base -t piece-base:latest .
 
@@ -137,7 +148,12 @@ jobs:
               if [ "$i" -eq 30 ]; then
                 echo "Health check failed after 300 seconds"
                 echo "=== api-gateway logs ==="
-                docker compose logs --tail=80 api-gateway
+                docker compose logs --tail=100 api-gateway
+                echo "=== MongoDB replica set status ==="
+                docker compose exec -T mongodb mongosh --quiet \
+                  -u \${MONGO_ROOT_USER:-admin} -p \${MONGO_ROOT_PASSWORD:-changeme} \
+                  --authenticationDatabase admin \
+                  --eval "printjson(rs.status())" 2>&1 || echo "rs.status() failed"
                 echo "=== websocket-gateway logs ==="
                 docker compose logs --tail=30 websocket-gateway
                 echo "=== platform logs ==="

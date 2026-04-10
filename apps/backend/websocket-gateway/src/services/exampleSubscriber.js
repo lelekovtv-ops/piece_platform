@@ -1,7 +1,7 @@
-import { subscribe, subjects } from '@piece/pubsub';
-import { createComponentLogger } from '../utils/logger.js';
+import { subscribe } from "@piece/pubsub";
+import { createComponentLogger } from "../utils/logger.js";
 
-const subscriberLogger = createComponentLogger('ExampleSubscriber');
+const subscriberLogger = createComponentLogger("ExampleSubscriber");
 
 /**
  * Example NATS -> WebSocket subscriber.
@@ -11,16 +11,16 @@ const subscriberLogger = createComponentLogger('ExampleSubscriber');
  */
 export async function initializeExampleSubscriber(io) {
   await subscribe(
-    'EXAMPLE_STREAM',
-    'ws-example',
+    "EXAMPLE_STREAM",
+    "ws-example",
     async (event) => {
       const { teamId } = event.data;
       if (!teamId) {
-        subscriberLogger.warn('Event missing teamId', { type: event.type });
+        subscriberLogger.warn("Event missing teamId", { type: event.type });
         return;
       }
 
-      subscriberLogger.debug('Broadcasting event', {
+      subscriberLogger.debug("Broadcasting event", {
         type: event.type,
         teamId,
       });
@@ -32,9 +32,9 @@ export async function initializeExampleSubscriber(io) {
       });
     },
     {
-      filterSubject: 'piece.example.events.>',
+      filterSubject: "piece.example.events.>",
     },
   );
 
-  subscriberLogger.info('Example subscriber initialized');
+  subscriberLogger.info("Example subscriber initialized");
 }
