@@ -11,7 +11,7 @@ export async function GET() {
 <div style="text-align:center">
   <p style="font-size:14px;opacity:0.6">Clearing all data...</p>
   <script>
-    const keys = Object.keys(localStorage).filter(k => k.startsWith('koza-') || k.startsWith('piece-'));
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('piece-') || k.startsWith('piece-'));
     keys.forEach(k => localStorage.removeItem(k));
     // Also clear IndexedDB
     if (indexedDB.databases) {

@@ -96,7 +96,7 @@ export const useLibraryStore = create<LibraryState>()(
       },
     }),
     {
-      name: 'koza-library',
+      name: 'piece-library',
       storage: safeStorage,
       partialize: (state) => {
         const persistedFiles: PersistedLibraryFile[] = state.files.map((file) => ({

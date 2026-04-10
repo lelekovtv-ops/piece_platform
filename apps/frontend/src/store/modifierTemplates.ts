@@ -140,7 +140,7 @@ export const useModifierTemplateStore = create<ModifierTemplateState>()(
       getTemplatesByType: (type) => get().templates.filter((t) => t.type === type),
     }),
     {
-      name: "koza-modifier-templates-v1",
+      name: "piece-modifier-templates-v1",
       storage: safeStorage,
     },
   ),

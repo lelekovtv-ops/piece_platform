@@ -2,17 +2,17 @@ import { authFetch } from "@/lib/auth/auth-fetch"
 import { ENDPOINTS } from "./endpoints"
 
 /**
- * Maps KOZA's chat request format to piece backend format and handles
+ * Maps Piece's chat request format to piece backend format and handles
  * the SSE stream format difference.
  *
- * KOZA frontend expects: raw text stream (ReadableStream of text chunks)
+ * Piece frontend expects: raw text stream (ReadableStream of text chunks)
  * Piece backend returns: SSE format (data: {"text": "chunk"}\n\n)
  *
  * This adapter calls piece backend and returns a Response with a raw text
  * ReadableStream that the existing frontend code can consume unchanged.
  */
 export async function chatViaBackend(
-  kozaRequest: {
+  chatRequest: {
     messages: Array<{ role: string; content: string }>
     modelId?: string
     system?: string
@@ -21,16 +21,16 @@ export async function chatViaBackend(
   },
   fetchOptions?: { signal?: AbortSignal },
 ): Promise<Response> {
-  const { provider, model } = resolveModel(kozaRequest.modelId)
+  const { provider, model } = resolveModel(chatRequest.modelId)
 
   const res = await authFetch(ENDPOINTS.chat, {
     method: "POST",
     body: JSON.stringify({
-      messages: kozaRequest.messages,
+      messages: chatRequest.messages,
       provider,
       model,
-      systemPrompt: kozaRequest.system,
-      temperature: kozaRequest.temperature,
+      systemPrompt: chatRequest.system,
+      temperature: chatRequest.temperature,
       stream: true,
     }),
     signal: fetchOptions?.signal,

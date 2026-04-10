@@ -9,7 +9,7 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import { Plus, Trash2, Search, LayoutGrid, List, Download } from "lucide-react"
 import { useProjectsStore } from "@/store/projects"
 import { getAccentColors } from "@/lib/themeColors"
-import { KozaLogo } from "@/components/ui/KozaLogo"
+import { PieceLogo } from "@/components/ui/PieceLogo"
 import { ProjectCard } from "./ProjectCard"
 
 interface ProjectsScreenProps {
@@ -105,7 +105,7 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
     >
       {/* Header */}
       <div className="flex items-center justify-between px-8 pt-6 pb-4">
-        <KozaLogo size="md" variant="default" className="text-white/20" />
+        <PieceLogo size="md" variant="default" className="text-white/20" />
 
         <div className="flex items-center gap-3">
           {projects.length > 0 && (
@@ -171,7 +171,7 @@ export function ProjectsScreen({ onOpenProject }: ProjectsScreenProps) {
         ) : filtered.length === 0 && !isCreating ? (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-6">
-              <KozaLogo size="lg" variant="default" className="text-white/8 mb-2" />
+              <PieceLogo size="lg" variant="default" className="text-white/8 mb-2" />
               <div className="flex gap-4">
                 <button
                   onClick={handleStartCreate}

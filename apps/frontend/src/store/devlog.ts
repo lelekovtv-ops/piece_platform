@@ -73,7 +73,7 @@ export const useDevLogStore = create<DevLogState>()((set, get) => ({
       entries: [newEntry, ...state.entries].slice(0, state.maxEntries),
     }))
 
-    console.log(`[KOZA ${entry.type}] ${entry.title}`, entry.meta || "")
+    console.log(`[PIECE ${entry.type}] ${entry.title}`, entry.meta || "")
   },
 
   clear: () => set({ entries: [] }),

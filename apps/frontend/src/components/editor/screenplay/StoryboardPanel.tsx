@@ -397,7 +397,7 @@ export function StoryboardPanel({
     const updated = Math.min(existingSceneShots.length, newBreakdownShots.length)
     const added = Math.max(0, newBreakdownShots.length - existingSceneShots.length)
     const removed = Math.max(0, existingSceneShots.length - newBreakdownShots.length)
-    console.log(`[KOZA] Breakdown merge: ${updated} updated, ${added} added, ${removed} removed`)
+    console.log(`[PIECE] Breakdown merge: ${updated} updated, ${added} added, ${removed} removed`)
 
     reorderShots([...preservedShots, ...mergedShots])
     selectScene(sceneId)

@@ -24,7 +24,7 @@ x-common-env: &common-env
   ENCRYPTION_KEY: ${ENCRYPTION_KEY}
   QDRANT_URL: http://qdrant:6333
   LOG_LEVEL: ${LOG_LEVEL:-INFO}
-  S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9006/koza-uploads}
+  S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9006/piece-uploads}
   IMAGOR_SECRET: ${IMAGOR_SECRET:-imagor-dev-secret-change-me}
   IMAGOR_BASE_URL: ${IMAGOR_BASE_URL:-/img}
   FROM_EMAIL: ${FROM_EMAIL:-noreply@localhost}
@@ -192,11 +192,11 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-      mc mb --ignore-existing local/koza-uploads &&
-      mc mb --ignore-existing local/koza-temp &&
-      mc mb --ignore-existing local/koza-exports &&
-      mc mb --ignore-existing local/koza-processed &&
-      mc ilm rule add local/koza-processed --expire-days 30 &&
+      mc mb --ignore-existing local/piece-uploads &&
+      mc mb --ignore-existing local/piece-temp &&
+      mc mb --ignore-existing local/piece-exports &&
+      mc mb --ignore-existing local/piece-processed &&
+      mc ilm rule add local/piece-processed --expire-days 30 &&
       echo 'Buckets created successfully'
       "
     environment:
@@ -246,8 +246,8 @@ services:
       IMAGOR_PROCESS_CONCURRENCY: 10
       IMAGOR_REQUEST_TIMEOUT: 15s
       HTTP_LOADER_ALLOWED_SOURCES: ""
-      S3_LOADER_BUCKET: koza-uploads
-      S3_RESULT_STORAGE_BUCKET: koza-processed
+      S3_LOADER_BUCKET: piece-uploads
+      S3_RESULT_STORAGE_BUCKET: piece-processed
       S3_ENDPOINT: http://minio:9000
       S3_FORCE_PATH_STYLE: 1
       AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minioadmin}

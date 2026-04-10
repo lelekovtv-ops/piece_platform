@@ -28,7 +28,7 @@ export const useThemeStore = create<ThemeState>()(
       },
     }),
     {
-      name: "koza-theme",
+      name: "piece-theme",
     }
   )
 )

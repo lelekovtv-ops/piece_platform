@@ -74,7 +74,7 @@ export const useProjectProfilesStore = create<ProjectProfilesState>()(
       },
     }),
     {
-      name: "koza-project-profiles-v1",
+      name: "piece-project-profiles-v1",
       storage: safeStorage,
     },
   ),

@@ -309,10 +309,10 @@ export default function ScriptWriterOverlay(props: ScriptWriterOverlayProps) {
   const getRegisteredAuthorName = () => {
     if (typeof window === "undefined") return "Александр Лелеков"
 
-    const directName = localStorage.getItem("koza-user-name")
+    const directName = localStorage.getItem("piece-user-name")
     if (directName && directName.trim()) return directName.trim()
 
-    const profileRaw = localStorage.getItem("koza-user-profile")
+    const profileRaw = localStorage.getItem("piece-user-profile")
     if (profileRaw) {
       try {
         const profile = JSON.parse(profileRaw) as { name?: string; fullName?: string }
@@ -786,8 +786,8 @@ function ViewModeButton() {
   // Close when other popups open (skip if we triggered it)
   useEffect(() => {
     const handler = () => { if (!selfOpening.current) setOpen(false) }
-    window.addEventListener("koza-popup-open", handler)
-    return () => window.removeEventListener("koza-popup-open", handler)
+    window.addEventListener("piece-popup-open", handler)
+    return () => window.removeEventListener("piece-popup-open", handler)
   }, [])
 
   const modes = [
@@ -817,7 +817,7 @@ function ViewModeButton() {
       <button
         ref={btnRef}
         type="button"
-        onClick={() => { const next = !open; setOpen(next); if (next) { selfOpening.current = true; window.dispatchEvent(new Event("koza-popup-open")); selfOpening.current = false } }}
+        onClick={() => { const next = !open; setOpen(next); if (next) { selfOpening.current = true; window.dispatchEvent(new Event("piece-popup-open")); selfOpening.current = false } }}
         title="View mode"
         style={{
           position: "fixed",
@@ -968,8 +968,8 @@ function KeyboardHints() {
   // Close when other popups open (skip if we triggered it)
   useEffect(() => {
     const handler = () => { if (!hintsSelfOpening.current) setOpen(false) }
-    window.addEventListener("koza-popup-open", handler)
-    return () => window.removeEventListener("koza-popup-open", handler)
+    window.addEventListener("piece-popup-open", handler)
+    return () => window.removeEventListener("piece-popup-open", handler)
   }, [])
 
   const sendKey = useCallback((key: string, opts?: { shift?: boolean; meta?: boolean }) => {
@@ -1009,7 +1009,7 @@ function KeyboardHints() {
       <button
         ref={hintsBtnRef}
         type="button"
-        onClick={() => { const next = !open; setOpen(next); if (next) { hintsSelfOpening.current = true; window.dispatchEvent(new Event("koza-popup-open")); hintsSelfOpening.current = false } }}
+        onClick={() => { const next = !open; setOpen(next); if (next) { hintsSelfOpening.current = true; window.dispatchEvent(new Event("piece-popup-open")); hintsSelfOpening.current = false } }}
         title="Keyboard shortcuts"
         style={{
           position: "fixed",

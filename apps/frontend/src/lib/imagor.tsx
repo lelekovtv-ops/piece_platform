@@ -7,21 +7,21 @@ import React, { useState, useCallback } from 'react';
  * URLs come pre-signed from the API — no secret needed on frontend.
  */
 export function getThumbnailUrl(key: string): string {
-  return `/storage/koza-uploads/${key}`;
+  return `/storage/piece-uploads/${key}`;
 }
 
 /**
  * Get the preview URL for an S3 key.
  */
 export function getPreviewUrl(key: string): string {
-  return `/storage/koza-uploads/${key}`;
+  return `/storage/piece-uploads/${key}`;
 }
 
 /**
  * Build a direct storage URL (fallback when imagor is unavailable).
  */
 export function getStorageUrl(key: string): string {
-  return `/storage/koza-uploads/${key}`;
+  return `/storage/piece-uploads/${key}`;
 }
 
 interface ImagorImageProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'src'> {

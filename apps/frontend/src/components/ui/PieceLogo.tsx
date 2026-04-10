@@ -1,4 +1,4 @@
-interface KozaLogoProps {
+interface PieceLogoProps {
   size?: "sm" | "md" | "lg";
   variant?: "default" | "terminal";
   showTagline?: boolean;
@@ -11,12 +11,12 @@ const SIZES = {
   lg:  { fontSize: 48, tagSize: 12 },
 };
 
-export function KozaLogo({
+export function PieceLogo({
   size = "md",
   variant = "default",
   showTagline = false,
   className = "",
-}: KozaLogoProps) {
+}: PieceLogoProps) {
   const { fontSize, tagSize } = SIZES[size];
 
   return (

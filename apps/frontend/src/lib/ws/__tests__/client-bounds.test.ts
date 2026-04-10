@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { KozaWSClient } from "../client"
+import { PieceWSClient } from "../client"
 
 // Mock WebSocket
 class MockWebSocket {
@@ -16,11 +16,11 @@ class MockWebSocket {
 
 vi.stubGlobal("WebSocket", MockWebSocket)
 
-describe("KozaWSClient bounded structures", () => {
-  let client: KozaWSClient
+describe("PieceWSClient bounded structures", () => {
+  let client: PieceWSClient
 
   beforeEach(() => {
-    client = new KozaWSClient("ws://localhost:8080")
+    client = new PieceWSClient("ws://localhost:8080")
   })
 
   describe("offlineQueue cap", () => {

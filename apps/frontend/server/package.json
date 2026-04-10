@@ -1,5 +1,5 @@
 {
-  "name": "koza-server",
+  "name": "piece-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",

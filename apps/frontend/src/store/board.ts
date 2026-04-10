@@ -48,7 +48,7 @@ export const useBoardStore = create<BoardState>()(
       setBibleStyle: (bibleStyle) => set({ bibleStyle }),
     }),
     {
-      name: "koza-board",
+      name: "piece-board",
       storage: safeStorage,
       partialize: (state) => ({
         theme: state.theme,

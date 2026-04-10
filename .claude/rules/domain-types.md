@@ -2,7 +2,7 @@
 
 ## Overview
 
-Shared frozen enums and factory functions for the KOZA cinematic domain. Thin package -- definitions only, no logic.
+Shared frozen enums and factory functions for the piece cinematic domain. Thin package -- definitions only, no logic.
 
 Location: `packages/domain-types/src/`
 

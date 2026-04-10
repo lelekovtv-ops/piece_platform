@@ -1857,7 +1857,7 @@ Return ONLY JSON array of indices like [0, 2, 4, 5]. No markdown.`,
 
     // Restore session
     try {
-      const raw = localStorage.getItem("koza-breakdown-studio-session")
+      const raw = localStorage.getItem("piece-breakdown-studio-session")
       if (raw) {
         const s = JSON.parse(raw)
         if (s.sceneText) setSceneText(s.sceneText)
@@ -1928,7 +1928,7 @@ Return ONLY JSON array of indices like [0, 2, 4, 5]. No markdown.`,
           locations: bible.locations.map(({ imageUrl, ...l }) => l),
           props: bible.props.map(({ imageUrl, ...p }) => p),
         }
-        localStorage.setItem("koza-breakdown-studio-session", JSON.stringify({
+        localStorage.setItem("piece-breakdown-studio-session", JSON.stringify({
           sceneText, style, bible: saveBible, configName, activePresetId, imageGenModel,
         }))
       } catch { /* quota */ }

@@ -12,8 +12,8 @@ export function SceneNavigatorButton() {
   // Close when other popups open (skip if we triggered it)
   useEffect(() => {
     const handler = () => { if (!selfOpening.current) setOpen(false) }
-    window.addEventListener("koza-popup-open", handler)
-    return () => window.removeEventListener("koza-popup-open", handler)
+    window.addEventListener("piece-popup-open", handler)
+    return () => window.removeEventListener("piece-popup-open", handler)
   }, [])
 
   return (
@@ -21,7 +21,7 @@ export function SceneNavigatorButton() {
       <button
         ref={btnRef}
         type="button"
-        onClick={() => { const next = !open; setOpen(next); if (next) { selfOpening.current = true; window.dispatchEvent(new Event("koza-popup-open")); selfOpening.current = false } }}
+        onClick={() => { const next = !open; setOpen(next); if (next) { selfOpening.current = true; window.dispatchEvent(new Event("piece-popup-open")); selfOpening.current = false } }}
         title="Scene navigator"
         style={{
           position: "fixed",

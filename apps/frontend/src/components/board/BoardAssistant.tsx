@@ -11,7 +11,7 @@ type AssistantMessage = {
   content: string
 }
 
-const KOZA_SYSTEM_PROMPT = `You are KOZA, an AI creative production copilot.
+const PIECE_SYSTEM_PROMPT = `You are PIECE, an AI creative production copilot.
 You help with screenwriting, storyboarding, and video production.
 Reply in the same language the user writes in.
 Keep responses concise and production-oriented.`
@@ -63,7 +63,7 @@ export default function BoardAssistant() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           modelId: selectedModel,
-          system: KOZA_SYSTEM_PROMPT,
+          system: PIECE_SYSTEM_PROMPT,
           messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
         }),
       })

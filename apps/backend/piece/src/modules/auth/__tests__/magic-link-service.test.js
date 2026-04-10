@@ -70,10 +70,10 @@ describe('MagicLinkService', () => {
     });
 
     it('should store email in cache', async () => {
-      const result = await generateMagicLink('user@koza.dev');
+      const result = await generateMagicLink('user@piece.dev');
       const cached = mockCacheStore.get(result.token);
 
-      expect(cached).toEqual({ email: 'user@koza.dev' });
+      expect(cached).toEqual({ email: 'user@piece.dev' });
     });
   });
 

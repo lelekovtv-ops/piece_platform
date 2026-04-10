@@ -656,7 +656,7 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
         }),
     }),
     {
-      name: "koza-voice-track-v1",
+      name: "piece-voice-track-v1",
       storage: safeStorage,
       partialize: (state) => ({
         activeProjectId: state.activeProjectId,

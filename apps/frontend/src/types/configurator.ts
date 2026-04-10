@@ -4,7 +4,7 @@ import type { ImageGenModel } from "@/lib/pipeline/imageGenerator"
 
 export type ConfiguratorNodeKind = "photo" | "prompt" | "ai" | "generator" | "output"
 
-export type ConfiguratorTemplateId = "default_directing" | "scene_to_image" | "reference_lock" | "pipeline_blueprint" | "koza_scene_to_directing_mvp" | "template_777" | "test_luc_besson"
+export type ConfiguratorTemplateId = "default_directing" | "scene_to_image" | "reference_lock" | "pipeline_blueprint" | "piece_scene_to_directing_mvp" | "template_777" | "test_luc_besson"
 
 export type AiNodeMode = "detail_guard" | "style_director" | "merge" | "rewrite"
 

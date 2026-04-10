@@ -216,7 +216,7 @@ export const useDialogueStore = create<DialogueState>()(
       },
     }),
     {
-      name: "koza-dialogue-v1",
+      name: "piece-dialogue-v1",
       storage: safeStorage,
       partialize: (state) => ({
         activeProjectId: state.activeProjectId,

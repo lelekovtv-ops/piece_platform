@@ -140,7 +140,7 @@ export const useStoryboardStore = create<StoryboardState>()(
       resetStoryboard: () => set({ frames: [], cardScale: 90 }),
     }),
     {
-      name: "koza-storyboard-v2",
+      name: "piece-storyboard-v2",
       storage: safeStorage,
     }
   )

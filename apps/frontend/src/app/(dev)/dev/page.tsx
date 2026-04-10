@@ -152,7 +152,7 @@ function sanitizeFileName(value: string): string {
     .replace(/[^a-z0-9а-яё_-]+/gi, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 80) || "koza-devlog"
+    .slice(0, 80) || "piece-devlog"
 }
 
 function formatEntryDocument(entry: LogEntry): string {
@@ -166,7 +166,7 @@ function formatEntryDocument(entry: LogEntry): string {
     ? `\n## Details\n\n\`\`\`\n${entry.details}\n\`\`\``
     : ""
 
-  return `# KOZA Operation Log\n\n## Entry\n\n- Timestamp: ${formatDateTime(entry.timestamp)}\n- Type: ${entry.type}\n- Title: ${entry.title}\n- Group: ${entry.group || "none"}${metaSection}${detailsSection}\n`
+  return `# PIECE Operation Log\n\n## Entry\n\n- Timestamp: ${formatDateTime(entry.timestamp)}\n- Type: ${entry.type}\n- Title: ${entry.title}\n- Group: ${entry.group || "none"}${metaSection}${detailsSection}\n`
 }
 
 function formatGroupDocument(entries: LogEntry[]): string {
@@ -188,14 +188,14 @@ function formatGroupDocument(entries: LogEntry[]): string {
     return `## Step ${index + 1} — ${entry.title}\n\n- Timestamp: ${formatDateTime(entry.timestamp)}\n- Type: ${entry.type}\n- Group: ${entry.group || "none"}\n\n### Meta\n\n${metaSection}\n\n### Details\n\n\`\`\`\n${details}\n\`\`\``
   })
 
-  return `# KOZA Operation Log\n\n## Summary\n\n- Operation: ${summary}\n- Started: ${formatDateTime(first.timestamp)}\n- Finished: ${formatDateTime(last.timestamp)}\n- Duration: ${formatDuration(durationMs)}\n- Entries: ${ordered.length}\n- Group: ${first.group || "none"}\n\n${sections.join("\n\n")}`
+  return `# PIECE Operation Log\n\n## Summary\n\n- Operation: ${summary}\n- Started: ${formatDateTime(first.timestamp)}\n- Finished: ${formatDateTime(last.timestamp)}\n- Duration: ${formatDuration(durationMs)}\n- Entries: ${ordered.length}\n- Group: ${first.group || "none"}\n\n${sections.join("\n\n")}`
 }
 
 function formatFullPipelineDocument(entries: LogEntry[]): string {
   const ordered = [...entries].sort((left, right) => left.timestamp - right.timestamp)
 
   if (ordered.length === 0) {
-    return "# KOZA Full Pipeline Log\n\nNo pipeline entries recorded.\n"
+    return "# PIECE Full Pipeline Log\n\nNo pipeline entries recorded.\n"
   }
 
   const first = ordered[0]
@@ -227,7 +227,7 @@ function formatFullPipelineDocument(entries: LogEntry[]): string {
     return `## Block ${index + 1} — ${groupTitle}\n\n- Group: ${blockEntries[0]?.group || "none"}\n- Entries: ${blockEntries.length}\n\n${steps.join("\n\n")}`
   })
 
-  return `# KOZA Full Pipeline Log\n\n## Summary\n\n- Started: ${formatDateTime(first.timestamp)}\n- Finished: ${formatDateTime(last.timestamp)}\n- Duration: ${formatDuration(Math.max(0, last.timestamp - first.timestamp))}\n- Total entries: ${ordered.length}\n- Blocks: ${grouped.size}\n\n${sections.join("\n\n")}`
+  return `# PIECE Full Pipeline Log\n\n## Summary\n\n- Started: ${formatDateTime(first.timestamp)}\n- Finished: ${formatDateTime(last.timestamp)}\n- Duration: ${formatDuration(Math.max(0, last.timestamp - first.timestamp))}\n- Total entries: ${ordered.length}\n- Blocks: ${grouped.size}\n\n${sections.join("\n\n")}`
 }
 
 function triggerDownload(fileName: string, content: string) {
@@ -396,7 +396,7 @@ function DevConsoleContent() {
   }
 
   const downloadFullPipelineLog = () => {
-    triggerDownload("koza-full-pipeline-log.md", formatFullPipelineDocument(pipelineEntries))
+    triggerDownload("piece-full-pipeline-log.md", formatFullPipelineDocument(pipelineEntries))
   }
 
   return (

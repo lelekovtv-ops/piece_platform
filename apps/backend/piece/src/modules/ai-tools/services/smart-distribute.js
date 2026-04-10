@@ -1,10 +1,10 @@
-import { config } from '../../../config.js';
-import { createComponentLogger } from '../../../utils/logger.js';
-import { z } from 'zod';
+import { config } from "../../../config.js";
+import { createComponentLogger } from "../../../utils/logger.js";
+import { z } from "zod";
 
-const componentLogger = createComponentLogger('SmartDistribute');
+const componentLogger = createComponentLogger("SmartDistribute");
 
-const SYSTEM = `You are KOZA — an AI film director and production planner.
+const SYSTEM = `You are PIECE — an AI film director and production planner.
 
 You receive a parsed script with sections and segments. Your job is to make SMART CREATIVE DECISIONS about how each piece should be produced.
 
@@ -31,7 +31,15 @@ OUTPUT: Return an array of enriched jobs with creative decisions.`;
 
 const JobSchema = z.object({
   segmentId: z.string(),
-  type: z.enum(['tts', 'video-gen', 'image-gen', 'music-gen', 'sfx', 'title-card', 'lipsync']),
+  type: z.enum([
+    "tts",
+    "video-gen",
+    "image-gen",
+    "music-gen",
+    "sfx",
+    "title-card",
+    "lipsync",
+  ]),
   prompt: z.string(),
   api: z.string(),
   camera: z.string().optional(),
@@ -53,10 +61,10 @@ const ResponseSchema = z.object({
 });
 
 export async function smartDistribute({ segments, sections, scriptText }) {
-  const apiKey = config.get('GOOGLE_API_KEY');
-  if (!apiKey) throw new Error('GOOGLE_API_KEY not configured');
+  const apiKey = config.get("GOOGLE_API_KEY");
+  if (!apiKey) throw new Error("GOOGLE_API_KEY not configured");
 
-  const { chatCompletion } = await import('../../ai/services/providers.js');
+  const { chatCompletion } = await import("../../ai/services/providers.js");
 
   const userPrompt = `Here is the script and its parsed structure. Make creative production decisions for each segment.
 
@@ -64,10 +72,15 @@ SCRIPT TEXT:
 ${scriptText}
 
 SECTIONS:
-${JSON.stringify(sections.map((s) => ({ id: s.id, title: s.title, order: s.order })), null, 2)}
+${JSON.stringify(
+  sections.map((s) => ({ id: s.id, title: s.title, order: s.order })),
+  null,
+  2,
+)}
 
 SEGMENTS:
-${JSON.stringify(segments.map((s) => ({
+${JSON.stringify(
+  segments.map((s) => ({
     id: s.id,
     role: s.role,
     track: s.track,
@@ -75,28 +88,36 @@ ${JSON.stringify(segments.map((s) => ({
     startMs: s.startMs,
     durationMs: s.durationMs,
     sectionId: s.sectionId,
-  })), null, 2)}
+  })),
+  null,
+  2,
+)}
 
 Analyze the emotional arc, decide on APIs, write cinematic prompts, choose camera moves.
 Return ONLY valid JSON matching this schema (no markdown, no backticks):
 {"directorNote":"...","colorGrade":"...","pacing":"...","jobs":[{"segmentId":"...","type":"tts|video-gen|image-gen|music-gen|sfx|title-card|lipsync","prompt":"...","api":"...","emotionalNote":"...","camera":"...","transitionTo":"..."}]}`;
 
   const response = await chatCompletion({
-    provider: 'google',
-    model: 'gemini-2.5-flash-lite',
-    messages: [{ role: 'user', content: userPrompt }],
+    provider: "google",
+    model: "gemini-2.5-flash-lite",
+    messages: [{ role: "user", content: userPrompt }],
     systemPrompt: SYSTEM,
     temperature: 0.7,
     maxTokens: 8192,
   });
 
-  const cleaned = response.content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+  const cleaned = response.content
+    .replace(/```json\s*/gi, "")
+    .replace(/```\s*/g, "")
+    .trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('No JSON found in response');
+  if (!match) throw new Error("No JSON found in response");
 
   const parsed = JSON.parse(match[0]);
   const validated = ResponseSchema.parse(parsed);
 
-  componentLogger.info('Smart distribution complete', { jobCount: validated.jobs.length });
+  componentLogger.info("Smart distribution complete", {
+    jobCount: validated.jobs.length,
+  });
   return validated;
 }
