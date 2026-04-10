@@ -445,7 +445,7 @@ describe('Refresh token cookie (controller helpers)', () => {
     authController = mod.authController;
   });
 
-  it('setRefreshTokenCookie sets path /v1/auth, httpOnly, sameSite lax on login', async () => {
+  it('setRefreshTokenCookie sets path /, httpOnly, sameSite lax on login', async () => {
     const { authService } = await import('../service.js');
 
     authService.login.mockResolvedValue({
@@ -471,7 +471,7 @@ describe('Refresh token cookie (controller helpers)', () => {
     expect(rtCookieCall[2]).toMatchObject({
       httpOnly: true,
       sameSite: 'lax',
-      path: '/v1/auth',
+      path: '/',
     });
   });
 
@@ -492,14 +492,13 @@ describe('Refresh token cookie (controller helpers)', () => {
     const clearCalls = res.clearCookie.mock.calls.filter(
       (call) => call[0] === 'piece_rt',
     );
-    expect(clearCalls.length).toBeGreaterThanOrEqual(2);
+    expect(clearCalls.length).toBeGreaterThanOrEqual(1);
 
     const paths = clearCalls.map((call) => call[1]?.path);
-    expect(paths).toContain('/v1/auth');
     expect(paths).toContain('/');
   });
 
-  it('setRefreshTokenCookie also clears legacy root path cookie', async () => {
+  it('setRefreshTokenCookie sets cookie with root path', async () => {
     const { authService } = await import('../service.js');
     authService.login.mockResolvedValue({
       user: { id: 'user-1', email: 'test@example.com', name: 'Test' },
@@ -516,10 +515,11 @@ describe('Refresh token cookie (controller helpers)', () => {
 
     await authController.login(req, res);
 
-    const rootClearCall = res.clearCookie.mock.calls.find(
-      (call) => call[0] === 'piece_rt' && call[1]?.path === '/',
+    const setCookieCall = res.cookie.mock.calls.find(
+      (call) => call[0] === 'piece_rt',
     );
-    expect(rootClearCall).toBeDefined();
+    expect(setCookieCall).toBeDefined();
+    expect(setCookieCall[2]?.path).toBe('/');
   });
 });
 

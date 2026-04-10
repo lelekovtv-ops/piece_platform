@@ -35,10 +35,9 @@ function setRefreshTokenCookie(res, refreshToken) {
     httpOnly: true,
     secure: config.get("NODE_ENV") === "production",
     sameSite: "lax",
-    path: "/v1/auth",
+    path: "/",
     maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   });
-  res.clearCookie("piece_rt", { path: "/" });
 }
 
 function clearRefreshTokenCookie(res) {
@@ -46,9 +45,8 @@ function clearRefreshTokenCookie(res) {
     httpOnly: true,
     secure: config.get("NODE_ENV") === "production",
     sameSite: "lax",
-    path: "/v1/auth",
+    path: "/",
   });
-  res.clearCookie("piece_rt", { path: "/" });
 }
 
 let _lockout = null;
@@ -159,13 +157,11 @@ async function register(req, res) {
     }
 
     if (details.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "VALIDATION_ERROR",
-          message: "Invalid input data",
-          details,
-        });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Invalid input data",
+        details,
+      });
     }
 
     try {
@@ -220,12 +216,10 @@ async function register(req, res) {
       componentLogger.info("Registration attempt with existing email", {
         email: req.body?.email?.toLowerCase(),
       });
-      return res
-        .status(201)
-        .json({
-          user: { email: req.body.email.toLowerCase() },
-          accessToken: null,
-        });
+      return res.status(201).json({
+        user: { email: req.body.email.toLowerCase() },
+        accessToken: null,
+      });
     }
     if (error.code === "WEAK_PASSWORD") {
       return res
@@ -342,12 +336,10 @@ async function refresh(req, res) {
     const result = await authService.refreshAccessToken(refreshToken);
     if (!result) {
       clearRefreshTokenCookie(res);
-      return res
-        .status(401)
-        .json({
-          error: "TOKEN_EXPIRED",
-          message: "Invalid or expired refresh token",
-        });
+      return res.status(401).json({
+        error: "TOKEN_EXPIRED",
+        message: "Invalid or expired refresh token",
+      });
     }
 
     const newTokenHash = hashToken(result.refreshToken);
@@ -545,13 +537,11 @@ async function changePassword(req, res) {
     }
 
     if (details.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "VALIDATION_ERROR",
-          message: "Invalid input data",
-          details,
-        });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Invalid input data",
+        details,
+      });
     }
 
     const currentRefreshToken = req.cookies?.piece_rt;
@@ -773,12 +763,10 @@ async function sendVerificationEmail(req, res) {
         req.user.email || req.user.id,
       );
       if (!allowed) {
-        return res
-          .status(429)
-          .json({
-            error: "RATE_LIMIT_EXCEEDED",
-            message: "Too many verification requests. Try again later.",
-          });
+        return res.status(429).json({
+          error: "RATE_LIMIT_EXCEEDED",
+          message: "Too many verification requests. Try again later.",
+        });
       }
     }
 
@@ -823,12 +811,10 @@ async function sendVerificationEmail(req, res) {
     componentLogger.error("Failed to send verification email", {
       error: error.message,
     });
-    res
-      .status(500)
-      .json({
-        error: "INTERNAL_ERROR",
-        message: "Failed to send verification email",
-      });
+    res.status(500).json({
+      error: "INTERNAL_ERROR",
+      message: "Failed to send verification email",
+    });
   }
 }
 
@@ -844,12 +830,10 @@ async function verifyEmail(req, res) {
 
     const result = await authService.verifyEmailToken(token);
     if (!result) {
-      return res
-        .status(400)
-        .json({
-          error: "INVALID_TOKEN",
-          message: "Verification link is invalid or expired",
-        });
+      return res.status(400).json({
+        error: "INVALID_TOKEN",
+        message: "Verification link is invalid or expired",
+      });
     }
 
     auditService.logAuthEvent(auditService.AUTH_EVENTS.EMAIL_VERIFIED, {
@@ -873,12 +857,10 @@ async function requestPasswordReset(req, res) {
     const { email } = req.body;
 
     if (!email || !EMAIL_REGEX.test(email)) {
-      return res
-        .status(400)
-        .json({
-          error: "VALIDATION_ERROR",
-          message: "Valid email is required",
-        });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Valid email is required",
+      });
     }
 
     const limiter = getResetLimiter();
@@ -925,13 +907,11 @@ async function confirmPasswordReset(req, res) {
     }
 
     if (details.length > 0) {
-      return res
-        .status(400)
-        .json({
-          error: "VALIDATION_ERROR",
-          message: "Invalid input data",
-          details,
-        });
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Invalid input data",
+        details,
+      });
     }
 
     const resetResult = await authService.confirmPasswordReset(
