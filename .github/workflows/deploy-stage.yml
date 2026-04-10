@@ -73,6 +73,7 @@ jobs:
           S3_PUBLIC_URL=${{ vars.STAGE_URL || 'https://staging.piece-app.com' }}/storage/koza-uploads
           IMAGOR_SECRET=${{ secrets.IMAGOR_SECRET }}
           GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          STAGING_GATE_TOKEN=${{ secrets.STAGING_GATE_TOKEN }}
           ENVEOF
           sed -i 's/^[[:space:]]*//' .env.staging
 
