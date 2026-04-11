@@ -12,9 +12,9 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
-  mode: "bubble",
+  mode: "expanded",
   bubbleState: "idle",
   setMode: (mode) => set({ mode }),
   setBubbleState: (bubbleState) => set({ bubbleState }),
-  reset: () => set({ mode: "bubble", bubbleState: "idle" }),
+  reset: () => set({ mode: "expanded", bubbleState: "idle" }),
 }));

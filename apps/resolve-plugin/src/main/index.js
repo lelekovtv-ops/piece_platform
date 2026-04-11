@@ -46,8 +46,7 @@ try {
   });
 }
 
-// Initialize Resolve API
-initResolve(PLUGIN_ID);
+// Initialize Resolve API inside app.whenReady (async)
 
 // Window manager — controls BrowserWindow size/mode
 const windowManager = {
@@ -99,6 +98,7 @@ function registerIpcHandlers() {
   const handlers = {};
 
   const apiUrl = config.get("PIECE_API_URL");
+  const devMode = config.get("DEV_MODE") === "true";
   const licenseClient = createLicenseClient({
     apiUrl,
     dataDir: config.dataDir,
@@ -108,6 +108,10 @@ function registerIpcHandlers() {
     dataDir: config.dataDir,
   });
 
+  if (devMode) {
+    componentLogger.info("DEV_MODE enabled — auth and license checks bypassed");
+  }
+
   registerGenerationHandlers(handlers, {
     registry,
     downloadDir: config.downloadDir,
@@ -116,6 +120,7 @@ function registerIpcHandlers() {
   registerKeysHandlers(handlers, {
     dataDir: config.dataDir,
     logger,
+    config,
   });
   registerSnapshotHandlers(handlers, {
     snapshotDir: config.snapshotDir,
@@ -124,8 +129,9 @@ function registerIpcHandlers() {
   registerAuthHandlers(handlers, {
     apiUrl,
     dataDir: config.dataDir,
+    devMode,
   });
-  registerLicenseHandlers(handlers, { licenseCheck });
+  registerLicenseHandlers(handlers, { licenseCheck, devMode });
   registerWindowHandlers(handlers, { windowManager });
 
   // Bridge handlers dict to Electron ipcMain.handle
@@ -156,6 +162,8 @@ function createWindow() {
     useContentSize: true,
     webPreferences: {
       preload: path.join(pluginDir, "preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
@@ -170,7 +178,8 @@ function createWindow() {
 }
 
 // Electron app lifecycle
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await initResolve(PLUGIN_ID);
   registerIpcHandlers();
   createWindow();
   componentLogger.info("PIECE Studio plugin ready", { pluginId: PLUGIN_ID });

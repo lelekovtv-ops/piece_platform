@@ -4,7 +4,7 @@ const mockInvoke = vi.fn();
 const mockOn = vi.fn();
 let exposedApi = null;
 
-vi.mock("electron", () => ({
+vi.mock("electron/renderer", () => ({
   contextBridge: {
     exposeInMainWorld: vi.fn((name, api) => {
       exposedApi = api;

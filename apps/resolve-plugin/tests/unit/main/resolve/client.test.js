@@ -40,12 +40,13 @@ describe("Resolve Client", () => {
   describe("initialize", () => {
     it("should call WorkflowIntegration.Initialize and GetResolve", async () => {
       const mockResolveObj = { GetProjectManager: vi.fn() };
+      mockInitialize.mockReturnValue(true);
       mockGetResolve.mockReturnValue(mockResolveObj);
 
       const { loadNativeModule, initialize, getResolve } =
         await import("../../../../src/main/resolve/client.js");
       loadNativeModule(() => mockWorkflowIntegration);
-      const result = initialize("app.piece.studio");
+      const result = await initialize("app.piece.studio");
 
       expect(result).toBe(true);
       expect(mockInitialize).toHaveBeenCalledWith("app.piece.studio");
@@ -54,12 +55,13 @@ describe("Resolve Client", () => {
     });
 
     it("should return false when GetResolve returns null", async () => {
+      mockInitialize.mockReturnValue(true);
       mockGetResolve.mockReturnValue(null);
 
       const { loadNativeModule, initialize, getResolve } =
         await import("../../../../src/main/resolve/client.js");
       loadNativeModule(() => mockWorkflowIntegration);
-      const result = initialize("app.piece.studio");
+      const result = await initialize("app.piece.studio");
 
       expect(result).toBe(false);
       expect(getResolve()).toBe(null);
@@ -75,12 +77,13 @@ describe("Resolve Client", () => {
 
     it("should return resolve object after initialization", async () => {
       const mockResolveObj = { GetProjectManager: vi.fn() };
+      mockInitialize.mockReturnValue(true);
       mockGetResolve.mockReturnValue(mockResolveObj);
 
       const { loadNativeModule, initialize, getResolve } =
         await import("../../../../src/main/resolve/client.js");
       loadNativeModule(() => mockWorkflowIntegration);
-      initialize("app.piece.studio");
+      await initialize("app.piece.studio");
 
       expect(getResolve()).toBe(mockResolveObj);
     });
@@ -89,12 +92,13 @@ describe("Resolve Client", () => {
   describe("cleanup", () => {
     it("should call CleanUp and reset resolve reference", async () => {
       const mockResolveObj = { GetProjectManager: vi.fn() };
+      mockInitialize.mockReturnValue(true);
       mockGetResolve.mockReturnValue(mockResolveObj);
 
       const { loadNativeModule, initialize, cleanup, getResolve } =
         await import("../../../../src/main/resolve/client.js");
       loadNativeModule(() => mockWorkflowIntegration);
-      initialize("app.piece.studio");
+      await initialize("app.piece.studio");
       expect(getResolve()).toBe(mockResolveObj);
 
       cleanup();
@@ -119,7 +123,7 @@ describe("Resolve Client", () => {
       });
 
       expect(isAvailable()).toBe(false);
-      const result = initialize("app.piece.studio");
+      const result = await initialize("app.piece.studio");
       expect(result).toBe(false);
       expect(getResolve()).toBe(null);
     });

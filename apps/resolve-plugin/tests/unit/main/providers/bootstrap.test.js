@@ -19,7 +19,11 @@ describe("Provider Bootstrap", () => {
     await import("../../../../src/main/providers/bootstrap.js");
 
     const ids = vi.mocked(registerProvider).mock.calls.map((c) => c[0].id);
-    expect(ids).toContain("sjinn");
+    expect(ids).toContain("sjinn-nano-banana");
+    expect(ids).toContain("sjinn-veo3-text");
+    expect(ids).toContain("sjinn-sora2-text");
+    expect(ids).toContain("sjinn-kling3-text");
+    expect(ids).toContain("sjinn-lipsync");
     expect(ids).toContain("gemini");
     expect(ids).toContain("fal-flux-schnell");
     expect(ids).toContain("fal-flux-pro");
@@ -29,6 +33,6 @@ describe("Provider Bootstrap", () => {
     expect(ids).toContain("fal-elevenlabs");
     expect(ids).toContain("fal-stable-audio");
     expect(ids).toContain("fish-audio");
-    expect(registerProvider).toHaveBeenCalledTimes(10);
+    expect(registerProvider).toHaveBeenCalledTimes(23);
   });
 });

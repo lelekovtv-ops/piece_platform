@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer } from "electron/renderer";
 import {
   AUTH_CHANNELS,
   LICENSE_CHANNELS,

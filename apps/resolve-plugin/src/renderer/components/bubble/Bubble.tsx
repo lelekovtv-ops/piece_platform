@@ -8,20 +8,6 @@ const stateColors: Record<string, string> = {
   error: "bg-red-500",
 };
 
-declare global {
-  interface Window {
-    api?: {
-      window: {
-        expand: () => Promise<void>;
-        collapse: () => Promise<void>;
-        getMode: () => Promise<string>;
-        hideTemporarily: () => Promise<void>;
-        showAgain: () => Promise<void>;
-      };
-    };
-  }
-}
-
 export default function Bubble() {
   const bubbleState = useUiStore((s) => s.bubbleState);
 

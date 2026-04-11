@@ -1,5 +1,20 @@
 import { registerProvider } from "./registry.js";
-import { sjinnProvider } from "./sjinn.js";
+import {
+  sjinnNanoBananaProvider,
+  sjinnNanoBananaProProvider,
+  sjinnNanoBanana2Provider,
+  sjinnSeedreamV4Provider,
+  sjinnSeedreamV5Provider,
+  sjinnVeo3TextProvider,
+  sjinnVeo3ImageProvider,
+  sjinnSora2TextProvider,
+  sjinnSora2ImageProvider,
+  sjinnGrokTextProvider,
+  sjinnGrokImageProvider,
+  sjinnKling3TextProvider,
+  sjinnKling3ImageProvider,
+  sjinnLipsyncProvider,
+} from "./sjinn.js";
 import { geminiProvider } from "./gemini.js";
 import { fluxSchnellProvider } from "./fal/flux-schnell.js";
 import { fluxProProvider } from "./fal/flux-pro.js";
@@ -11,7 +26,20 @@ import { stableAudioProvider } from "./fal/stable-audio.js";
 import { fishAudioProvider } from "./fish-audio/tts.js";
 
 const ALL_PROVIDERS = [
-  sjinnProvider,
+  sjinnNanoBananaProvider,
+  sjinnNanoBananaProProvider,
+  sjinnNanoBanana2Provider,
+  sjinnSeedreamV4Provider,
+  sjinnSeedreamV5Provider,
+  sjinnVeo3TextProvider,
+  sjinnVeo3ImageProvider,
+  sjinnSora2TextProvider,
+  sjinnSora2ImageProvider,
+  sjinnGrokTextProvider,
+  sjinnGrokImageProvider,
+  sjinnKling3TextProvider,
+  sjinnKling3ImageProvider,
+  sjinnLipsyncProvider,
   geminiProvider,
   fluxSchnellProvider,
   fluxProProvider,

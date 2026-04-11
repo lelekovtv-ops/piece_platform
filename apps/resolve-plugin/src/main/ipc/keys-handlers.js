@@ -2,7 +2,7 @@ import { join } from "path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import { KEYS_CHANNELS } from "../../shared/ipc-channels.js";
 
-export function registerKeysHandlers(handlers, { dataDir, logger }) {
+export function registerKeysHandlers(handlers, { dataDir, logger, config }) {
   const log = logger.createComponentLogger
     ? logger.createComponentLogger("Keys")
     : logger;
@@ -27,7 +27,7 @@ export function registerKeysHandlers(handlers, { dataDir, logger }) {
 
   handlers[KEYS_CHANNELS.get] = (keyId) => {
     const keys = readKeys();
-    return keys[keyId] ?? null;
+    return keys[keyId] ?? config?.get(keyId) ?? null;
   };
 
   handlers[KEYS_CHANNELS.set] = (keyId, value) => {

@@ -5,6 +5,7 @@ import fs from "fs";
 const DEFAULTS = {
   LOG_LEVEL: "info",
   PIECE_API_URL: "https://api.piece.app",
+  DEV_MODE: "false",
 };
 
 export function createConfig({ dataDir } = {}) {

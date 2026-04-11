@@ -14,7 +14,8 @@ export function registerGenerationHandlers(
   let currentStatus = "idle";
 
   handlers[GENERATION_CHANNELS.run] = async (params) => {
-    const { provider: providerId, apiKey, prompt, ...extra } = params || {};
+    const { providerId, provider, apiKey, prompt, ...extra } = params || {};
+    const resolvedProviderId = providerId || provider;
 
     if (!apiKey) {
       throw new Error("apiKey is required");
@@ -23,19 +24,19 @@ export function registerGenerationHandlers(
       throw new Error("prompt is required");
     }
 
-    const provider = registry.getProvider(providerId);
-    if (!provider) {
-      throw new Error(`Provider not found: ${providerId}`);
+    const providerObj = registry.getProvider(resolvedProviderId);
+    if (!providerObj) {
+      throw new Error(`Provider not found: ${resolvedProviderId}`);
     }
 
     currentStatus = "generating";
     log.info("Generation started", {
-      provider: providerId,
-      kind: provider.kind,
+      provider: resolvedProviderId,
+      kind: providerObj.kind,
     });
 
     try {
-      const result = await provider.generate({ apiKey, prompt, ...extra });
+      const result = await providerObj.generate({ apiKey, prompt, ...extra });
 
       mkdirSync(downloadDir, { recursive: true });
 
@@ -53,17 +54,24 @@ export function registerGenerationHandlers(
         writeFileSync(filePath, buf);
       }
 
-      const { imported } = importAndAppend(filePath, {});
+      let clipName = filename;
+      try {
+        const { imported } = importAndAppend(filePath, {});
+        clipName = imported?.[0]?.GetClipName?.() || filename;
+      } catch (importErr) {
+        log.warn("Could not import to Resolve timeline", {
+          error: importErr.message,
+        });
+      }
 
       currentStatus = "idle";
-      const clipName = imported?.[0]?.GetClipName?.() || filename;
       log.info("Generation complete", { clipName, filePath });
 
       return { clipName, filePath };
     } catch (err) {
       currentStatus = "idle";
       log.error("Generation failed", { error: err.message });
-      return { error: err.message };
+      throw err;
     }
   };
 

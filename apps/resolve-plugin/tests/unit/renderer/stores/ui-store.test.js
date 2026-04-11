@@ -8,7 +8,7 @@ describe("ui-store", () => {
 
   it("starts in bubble mode with idle state", () => {
     const state = useUiStore.getState();
-    expect(state.mode).toBe("bubble");
+    expect(state.mode).toBe("expanded");
     expect(state.bubbleState).toBe("idle");
   });
 
@@ -38,7 +38,7 @@ describe("ui-store", () => {
     useUiStore.getState().reset();
 
     const state = useUiStore.getState();
-    expect(state.mode).toBe("bubble");
+    expect(state.mode).toBe("expanded");
     expect(state.bubbleState).toBe("idle");
   });
 });

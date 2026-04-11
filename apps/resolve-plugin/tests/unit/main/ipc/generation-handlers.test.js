@@ -209,7 +209,7 @@ describe("registerGenerationHandlers", () => {
       delete globalThis.fetch;
     });
 
-    it("returns error object on generate failure", async () => {
+    it("throws on generate failure", async () => {
       provider.generate.mockRejectedValue(new Error("API rate limit"));
       registerGenerationHandlers(handlers, {
         registry,
@@ -217,17 +217,13 @@ describe("registerGenerationHandlers", () => {
         logger,
       });
 
-      const result = await handlers[GENERATION_CHANNELS.run]({
-        provider: "test-provider",
-        apiKey: "k",
-        prompt: "dog",
-      });
-
-      expect(result).toEqual(
-        expect.objectContaining({
-          error: "API rate limit",
+      await expect(
+        handlers[GENERATION_CHANNELS.run]({
+          provider: "test-provider",
+          apiKey: "k",
+          prompt: "dog",
         }),
-      );
+      ).rejects.toThrow("API rate limit");
     });
 
     it("requires apiKey parameter", async () => {

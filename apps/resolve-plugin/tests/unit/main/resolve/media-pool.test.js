@@ -49,11 +49,11 @@ describe("Media Pool Operations", () => {
 
     const clientModule = await import("../../../../src/main/resolve/client.js");
     clientModule.loadNativeModule(() => ({
-      Initialize: vi.fn(),
+      Initialize: vi.fn(() => true),
       CleanUp: vi.fn(),
       GetResolve: vi.fn(() => mockResolve),
     }));
-    clientModule.initialize("app.piece.studio");
+    await clientModule.initialize("app.piece.studio");
 
     mediaPool = await import("../../../../src/main/resolve/media-pool.js");
   });

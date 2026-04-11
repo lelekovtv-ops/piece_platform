@@ -1,28 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { useAuthStore } from "../../stores/auth-store";
 
-declare global {
-  interface Window {
-    api?: {
-      auth: {
-        startSignIn: () => Promise<{
-          userCode: string;
-          deviceCode: string;
-          verificationUri: string;
-          expiresIn: number;
-          interval: number;
-        }>;
-        getCurrentUser: () => Promise<{
-          id: string;
-          email: string;
-          name?: string;
-        } | null>;
-        signOut: () => Promise<void>;
-      };
-    };
-  }
-}
-
 export default function DeviceCodeScreen() {
   const {
     status,

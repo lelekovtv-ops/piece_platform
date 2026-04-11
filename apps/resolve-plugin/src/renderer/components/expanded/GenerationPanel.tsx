@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useGenerationStore } from "../../stores/generation-store";
 import { useKeysStore } from "../../stores/keys-store";
 import { PROVIDER_MAP } from "../../constants/providers";
@@ -7,24 +7,6 @@ import ApiKeyInput from "./ApiKeyInput";
 import PromptInput from "./PromptInput";
 import GenerateButton from "./GenerateButton";
 import StatusDisplay from "./StatusDisplay";
-
-declare global {
-  interface Window {
-    api?: {
-      generation: {
-        run: (input: {
-          providerId: string;
-          prompt: string;
-          apiKey: string;
-          referenceImage?: string | null;
-        }) => Promise<{ clipName: string; filePath?: string }>;
-      };
-      snapshot: {
-        capture: () => Promise<{ filePath: string }>;
-      };
-    };
-  }
-}
 
 export default function GenerationPanel() {
   const {
@@ -50,6 +32,13 @@ export default function GenerationPanel() {
   const selectedProvider = providers.find((p) => p.id === provider);
   const keyId = selectedProvider?.keyId || "";
   const apiKeyValue = getKey(keyId);
+
+  useEffect(() => {
+    if (!keyId || apiKeyValue) return;
+    window.api?.keys?.get(keyId).then((val: string | null) => {
+      if (val) setKey(keyId, val);
+    });
+  }, [keyId, apiKeyValue, setKey]);
 
   const canGenerate =
     !!provider && !!prompt.trim() && !!apiKeyValue && status !== "generating";

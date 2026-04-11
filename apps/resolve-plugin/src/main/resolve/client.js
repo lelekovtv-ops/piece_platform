@@ -27,15 +27,20 @@ export function isAvailable() {
   return WorkflowIntegration !== null;
 }
 
-export function initialize(pluginId) {
+export async function initialize(pluginId) {
   if (!WorkflowIntegration) {
     getLogger().warn("Cannot initialize — WorkflowIntegration not loaded");
     return false;
   }
 
   try {
-    WorkflowIntegration.Initialize(pluginId);
-    const resolve = WorkflowIntegration.GetResolve();
+    const isSuccess = await WorkflowIntegration.Initialize(pluginId);
+    if (!isSuccess) {
+      getLogger().warn("Initialize returned false", { pluginId });
+      return false;
+    }
+
+    const resolve = await WorkflowIntegration.GetResolve();
 
     if (!resolve) {
       getLogger().warn("GetResolve returned null — Resolve may not be running");

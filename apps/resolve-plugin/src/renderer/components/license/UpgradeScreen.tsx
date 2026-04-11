@@ -1,29 +1,6 @@
 import { useCallback, useState } from "react";
 import { useLicenseStore } from "../../stores/license-store";
 
-declare global {
-  interface Window {
-    api?: {
-      license: {
-        check: () => Promise<{
-          hasLicense: boolean;
-          tier: string | null;
-          expiresAt: string | null;
-          stale: boolean;
-          error?: string;
-        }>;
-        refresh: () => Promise<{
-          hasLicense: boolean;
-          tier: string | null;
-          expiresAt: string | null;
-          stale: boolean;
-          error?: string;
-        }>;
-      };
-    };
-  }
-}
-
 const FEATURES = [
   "AI image generation (Gemini, Flux, Sjinn)",
   "AI video generation (Kling, Veo3, Luma)",

@@ -25,12 +25,20 @@ describe("Sjinn Provider", () => {
   });
 
   describe("provider shape", () => {
-    it("should export a valid provider object", () => {
+    it("should export legacy sjinnProvider pointing to nano-banana", () => {
       const p = sjinn.sjinnProvider;
-      expect(p.id).toBe("sjinn");
-      expect(p.name).toBe("SJinn");
+      expect(p.id).toBe("sjinn-nano-banana");
       expect(p.kind).toBe("image");
       expect(typeof p.generate).toBe("function");
+    });
+
+    it("should export all sjinn providers", () => {
+      expect(sjinn.sjinnNanoBananaProvider.id).toBe("sjinn-nano-banana");
+      expect(sjinn.sjinnVeo3TextProvider.id).toBe("sjinn-veo3-text");
+      expect(sjinn.sjinnVeo3TextProvider.kind).toBe("video");
+      expect(sjinn.sjinnSora2TextProvider.id).toBe("sjinn-sora2-text");
+      expect(sjinn.sjinnKling3TextProvider.id).toBe("sjinn-kling3-text");
+      expect(sjinn.sjinnLipsyncProvider.id).toBe("sjinn-lipsync");
     });
   });
 
@@ -182,12 +190,9 @@ describe("Sjinn Provider", () => {
         },
       ]);
 
-      const result = await sjinn.sjinnProvider.generate({
+      const result = await sjinn.sjinnNanoBananaProvider.generate({
         apiKey: "key-1",
-        toolType: "txt2img",
-        input: { prompt: "sunset" },
-        pollIntervalMs: 10,
-        maxPollAttempts: 5,
+        prompt: "sunset",
       });
 
       expect(result).toEqual({
@@ -196,6 +201,10 @@ describe("Sjinn Provider", () => {
         suffix: ".png",
       });
       expect(globalThis.fetch).toHaveBeenCalledTimes(3);
+
+      const createBody = JSON.parse(globalThis.fetch.mock.calls[0][1].body);
+      expect(createBody.tool_type).toBe("nano-banana-image-api");
+      expect(createBody.input.prompt).toBe("sunset");
     });
 
     it("should throw when task fails (status -1)", async () => {
@@ -222,11 +231,9 @@ describe("Sjinn Provider", () => {
       ]);
 
       await expect(
-        sjinn.sjinnProvider.generate({
+        sjinn.sjinnNanoBananaProvider.generate({
           apiKey: "key-1",
-          toolType: "txt2img",
-          input: {},
-          pollIntervalMs: 10,
+          prompt: "bad",
         }),
       ).rejects.toThrow(/NSFW content/);
     });
@@ -263,14 +270,13 @@ describe("Sjinn Provider", () => {
       ]);
 
       await expect(
-        sjinn.sjinnProvider.generate({
+        sjinn.sjinnNanoBananaProvider.generate({
           apiKey: "key-1",
-          toolType: "txt2img",
-          input: {},
+          prompt: "test",
           pollIntervalMs: 10,
           maxPollAttempts: 2,
         }),
-      ).rejects.toThrow(/timed out|max poll/i);
+      ).rejects.toThrow(/timed out/i);
     });
   });
 });

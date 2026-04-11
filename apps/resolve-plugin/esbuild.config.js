@@ -6,7 +6,7 @@ const commonOptions = {
   format: "cjs",
   target: "node20",
   sourcemap: true,
-  external: ["electron"],
+  external: ["electron", "electron/renderer"],
   banner: {
     js: "var import_meta_url = require('url').pathToFileURL(__filename).href;",
   },
@@ -29,4 +29,5 @@ await build({
   ...commonOptions,
   entryPoints: ["src/main/preload.js"],
   outfile: "preload.js",
+  banner: {}, // Preload doesn't need import_meta_url
 });
