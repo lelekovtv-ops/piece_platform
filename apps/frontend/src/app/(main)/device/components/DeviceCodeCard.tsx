@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { verifyDeviceCode } from "@/lib/api/device-auth";
-import { useAuthStore } from "@/lib/auth/auth-store";
 import { CheckCircle2, XCircle, Loader2, Monitor } from "lucide-react";
 
 type Status = "idle" | "submitting" | "success" | "error";

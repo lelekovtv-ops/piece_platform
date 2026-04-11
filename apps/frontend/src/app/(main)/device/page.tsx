@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/auth/auth-store";
 import DeviceCodeCard from "./components/DeviceCodeCard";
@@ -9,17 +9,17 @@ export default function DevicePage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
   const router = useRouter();
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace("/login?redirect=/device");
-      return;
-    }
-    if (!isLoading && isAuthenticated) {
-      setReady(true);
     }
   }, [isLoading, isAuthenticated, router]);
+
+  const ready = useMemo(
+    () => !isLoading && isAuthenticated,
+    [isLoading, isAuthenticated],
+  );
 
   if (!ready) {
     return (

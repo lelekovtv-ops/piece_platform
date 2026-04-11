@@ -3,6 +3,11 @@ import { join } from "path";
 import { existsSync } from "fs";
 import { createConfig } from "./config.js";
 import { createPluginLogger } from "./logger.js";
+import {
+  loadNativeModule,
+  initialize as initResolve,
+  cleanup as resolveCleanup,
+} from "./resolve/client.js";
 
 export const PLUGIN_ID = "app.piece.studio";
 
@@ -13,17 +18,12 @@ const logger = createPluginLogger({
 });
 const componentLogger = logger.createComponentLogger("ResolvePlugin");
 
-let WorkflowIntegration = null;
 let BrowserWindow = null;
 
-try {
+loadNativeModule(() => {
   const require = createRequire(import.meta.url);
-  WorkflowIntegration = require("WorkflowIntegration");
-} catch {
-  componentLogger.warn(
-    "WorkflowIntegration not available (running outside Resolve)",
-  );
-}
+  return require("WorkflowIntegration");
+});
 
 try {
   const require = createRequire(import.meta.url);
@@ -38,10 +38,7 @@ export function init() {
     pluginId: PLUGIN_ID,
   });
 
-  if (WorkflowIntegration) {
-    WorkflowIntegration.Initialize(PLUGIN_ID);
-    componentLogger.info("WorkflowIntegration initialized");
-  }
+  initResolve(PLUGIN_ID);
 
   if (BrowserWindow) {
     const win = new BrowserWindow({
@@ -84,11 +81,9 @@ process.on("uncaughtException", (err) => {
 });
 
 process.on("exit", () => {
-  if (WorkflowIntegration) {
-    try {
-      WorkflowIntegration.CleanUp();
-    } catch {
-      // Best-effort cleanup
-    }
+  try {
+    resolveCleanup();
+  } catch {
+    // Best-effort cleanup
   }
 });
