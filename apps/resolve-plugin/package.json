@@ -10,6 +10,7 @@
     "build": "vite build && pnpm run build:main",
     "build:main": "node esbuild.config.js",
     "link:dev": "node scripts/link-to-resolve.js",
+    "build:installer": "node scripts/build-installer.js",
     "lint": "eslint src tests --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest"

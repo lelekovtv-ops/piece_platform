@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { useAuthStore } from "../stores/auth-store";
+import { useAuthStore } from "../../stores/auth-store";
 
 declare global {
   interface Window {

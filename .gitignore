@@ -26,6 +26,7 @@ dist/
 
 # Build artifacts
 *.tsbuildinfo
+release/
 
 # Scripts — compiled app bundles
 scripts/*.app/

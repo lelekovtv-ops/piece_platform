@@ -1,8 +1,11 @@
 import { useEffect } from "react";
 import { useAuthStore } from "./stores/auth-store";
 import { useLicenseStore } from "./stores/license-store";
+import { useUiStore } from "./stores/ui-store";
 import DeviceCodeScreen from "./components/auth/DeviceCodeScreen";
 import UpgradeScreen from "./components/license/UpgradeScreen";
+import Bubble from "./components/bubble/Bubble";
+import ExpandedPanel from "./components/expanded/ExpandedPanel";
 
 function LoadingScreen() {
   return (
@@ -15,22 +18,10 @@ function LoadingScreen() {
   );
 }
 
-function MainScreen() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-neutral-950 text-neutral-100">
-      <div className="text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">PIECE Studio</h1>
-        <p className="mt-2 text-sm text-neutral-400">
-          Connected to DaVinci Resolve
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const authStatus = useAuthStore((s) => s.status);
   const { hasLicense, loading: licenseLoading } = useLicenseStore();
+  const mode = useUiStore((s) => s.mode);
 
   useEffect(() => {
     async function init() {
@@ -58,6 +49,13 @@ export default function App() {
     init();
   }, []);
 
+  useEffect(() => {
+    const handler = (_event: unknown, newMode: "bubble" | "expanded") => {
+      useUiStore.getState().setMode(newMode);
+    };
+    window.api?.window.onModeChanged?.(handler);
+  }, []);
+
   if (authStatus === "checking") {
     return <LoadingScreen />;
   }
@@ -74,5 +72,9 @@ export default function App() {
     return <UpgradeScreen />;
   }
 
-  return <MainScreen />;
+  if (mode === "expanded") {
+    return <ExpandedPanel />;
+  }
+
+  return <Bubble />;
 }

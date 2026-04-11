@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useLicenseStore } from "../stores/license-store";
+import { useLicenseStore } from "../../stores/license-store";
 
 declare global {
   interface Window {
