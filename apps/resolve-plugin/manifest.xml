@@ -5,6 +5,6 @@
         <Name>PIECE Studio</Name>
         <Version>1.0.0</Version>
         <Description>AI generation suite for DaVinci Resolve. Image, video, and audio generation through your favorite AI providers.</Description>
-        <FilePath>dist/main/index.cjs</FilePath>
+        <FilePath>main.js</FilePath>
     </Plugin>
 </BlackmagicDesign>

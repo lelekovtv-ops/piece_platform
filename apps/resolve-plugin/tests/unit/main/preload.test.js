@@ -1,38 +1,37 @@
-import { describe, it, expect, vi } from "vitest";
-import { createPreloadApi } from "../../../src/main/preload.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-function makeMockHandlers() {
-  return {
-    "auth:start-signin": vi.fn().mockResolvedValue({ code: "ABC123" }),
-    "auth:get-current-user": vi.fn().mockResolvedValue({ email: "a@b.com" }),
-    "auth:sign-out": vi.fn().mockResolvedValue(undefined),
-    "license:check": vi.fn().mockResolvedValue({ hasLicense: true }),
-    "license:refresh": vi.fn().mockResolvedValue({ hasLicense: true }),
-    "window:expand": vi.fn(),
-    "window:collapse": vi.fn(),
-    "window:get-mode": vi.fn().mockReturnValue("bubble"),
-    "window:hide-temporarily": vi.fn(),
-    "window:show-again": vi.fn(),
-    "generation:run": vi.fn().mockResolvedValue({ clipName: "clip_001" }),
-    "generation:cancel": vi.fn(),
-    "generation:get-status": vi.fn().mockReturnValue("idle"),
-    "snapshot:capture": vi
-      .fn()
-      .mockResolvedValue({ filePath: "/tmp/snap.png" }),
-    "keys:get": vi.fn().mockResolvedValue("sk-123"),
-    "keys:set": vi.fn().mockResolvedValue(undefined),
-    "keys:remove": vi.fn().mockResolvedValue(undefined),
-    "keys:list": vi.fn().mockResolvedValue(["openai", "fal"]),
-  };
+const mockInvoke = vi.fn();
+const mockOn = vi.fn();
+let exposedApi = null;
+
+vi.mock("electron", () => ({
+  contextBridge: {
+    exposeInMainWorld: vi.fn((name, api) => {
+      exposedApi = api;
+    }),
+  },
+  ipcRenderer: {
+    invoke: mockInvoke,
+    on: mockOn,
+  },
+}));
+
+beforeEach(() => {
+  exposedApi = null;
+  mockInvoke.mockReset();
+  mockOn.mockReset();
+});
+
+async function loadPreload() {
+  vi.resetModules();
+  exposedApi = null;
+  await import("../../../src/main/preload.js");
+  return exposedApi;
 }
 
-function makeMockEventBus() {
-  return { on: vi.fn(), off: vi.fn() };
-}
-
-describe("createPreloadApi", () => {
-  it("exposes all six namespaces", () => {
-    const api = createPreloadApi(makeMockHandlers(), makeMockEventBus());
+describe("preload (Electron contextBridge)", () => {
+  it("exposes all six namespaces on window.api", async () => {
+    const api = await loadPreload();
     expect(api).toHaveProperty("auth");
     expect(api).toHaveProperty("license");
     expect(api).toHaveProperty("window");
@@ -42,168 +41,142 @@ describe("createPreloadApi", () => {
   });
 
   describe("auth namespace", () => {
-    it("delegates startSignIn", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes auth:start-signin", async () => {
+      const api = await loadPreload();
+      mockInvoke.mockResolvedValue({ code: "ABC123" });
       const result = await api.auth.startSignIn();
-      expect(h["auth:start-signin"]).toHaveBeenCalledOnce();
+      expect(mockInvoke).toHaveBeenCalledWith("auth:start-signin");
       expect(result).toEqual({ code: "ABC123" });
     });
 
-    it("delegates getCurrentUser", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes auth:get-current-user", async () => {
+      const api = await loadPreload();
       await api.auth.getCurrentUser();
-      expect(h["auth:get-current-user"]).toHaveBeenCalledOnce();
+      expect(mockInvoke).toHaveBeenCalledWith("auth:get-current-user");
     });
 
-    it("delegates signOut", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes auth:sign-out", async () => {
+      const api = await loadPreload();
       await api.auth.signOut();
-      expect(h["auth:sign-out"]).toHaveBeenCalledOnce();
+      expect(mockInvoke).toHaveBeenCalledWith("auth:sign-out");
     });
   });
 
   describe("license namespace", () => {
-    it("delegates check", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes license:check", async () => {
+      const api = await loadPreload();
       await api.license.check();
-      expect(h["license:check"]).toHaveBeenCalledOnce();
+      expect(mockInvoke).toHaveBeenCalledWith("license:check");
     });
 
-    it("delegates refresh", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes license:refresh", async () => {
+      const api = await loadPreload();
       await api.license.refresh();
-      expect(h["license:refresh"]).toHaveBeenCalledOnce();
+      expect(mockInvoke).toHaveBeenCalledWith("license:refresh");
     });
   });
 
   describe("window namespace", () => {
-    it("delegates expand and collapse", () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      api.window.expand();
-      api.window.collapse();
-      expect(h["window:expand"]).toHaveBeenCalledOnce();
-      expect(h["window:collapse"]).toHaveBeenCalledOnce();
+    it("invokes expand and collapse", async () => {
+      const api = await loadPreload();
+      await api.window.expand();
+      await api.window.collapse();
+      expect(mockInvoke).toHaveBeenCalledWith("window:expand");
+      expect(mockInvoke).toHaveBeenCalledWith("window:collapse");
     });
 
-    it("delegates getMode", () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      const mode = api.window.getMode();
-      expect(mode).toBe("bubble");
+    it("invokes getMode", async () => {
+      const api = await loadPreload();
+      await api.window.getMode();
+      expect(mockInvoke).toHaveBeenCalledWith("window:get-mode");
     });
 
-    it("delegates hideTemporarily and showAgain", () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      api.window.hideTemporarily();
-      api.window.showAgain();
-      expect(h["window:hide-temporarily"]).toHaveBeenCalledOnce();
-      expect(h["window:show-again"]).toHaveBeenCalledOnce();
+    it("invokes hideTemporarily and showAgain", async () => {
+      const api = await loadPreload();
+      await api.window.hideTemporarily();
+      await api.window.showAgain();
+      expect(mockInvoke).toHaveBeenCalledWith("window:hide-temporarily");
+      expect(mockInvoke).toHaveBeenCalledWith("window:show-again");
     });
 
-    it("registers onModeChanged callback via eventBus", () => {
-      const bus = makeMockEventBus();
-      const api = createPreloadApi(makeMockHandlers(), bus);
+    it("registers onModeChanged via ipcRenderer.on", async () => {
+      const api = await loadPreload();
       const cb = vi.fn();
       api.window.onModeChanged(cb);
-      expect(bus.on).toHaveBeenCalledWith("window:mode-changed", cb);
+      expect(mockOn).toHaveBeenCalledWith(
+        "window:mode-changed",
+        expect.any(Function),
+      );
     });
   });
 
   describe("generation namespace", () => {
-    it("delegates run with params", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes run with params", async () => {
+      const api = await loadPreload();
       const params = { provider: "sjinn", prompt: "cat", apiKey: "k" };
-      const result = await api.generation.run(params);
-      expect(h["generation:run"]).toHaveBeenCalledWith(params);
-      expect(result).toEqual({ clipName: "clip_001" });
+      await api.generation.run(params);
+      expect(mockInvoke).toHaveBeenCalledWith("generation:run", params);
     });
 
-    it("delegates cancel and getStatus", () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      api.generation.cancel();
-      api.generation.getStatus();
-      expect(h["generation:cancel"]).toHaveBeenCalledOnce();
-      expect(h["generation:get-status"]).toHaveBeenCalledOnce();
+    it("invokes cancel and getStatus", async () => {
+      const api = await loadPreload();
+      await api.generation.cancel();
+      await api.generation.getStatus();
+      expect(mockInvoke).toHaveBeenCalledWith("generation:cancel");
+      expect(mockInvoke).toHaveBeenCalledWith("generation:get-status");
     });
 
-    it("registers event callbacks via eventBus", () => {
-      const bus = makeMockEventBus();
-      const api = createPreloadApi(makeMockHandlers(), bus);
-      const onP = vi.fn();
-      const onC = vi.fn();
-      const onE = vi.fn();
-      api.generation.onProgress(onP);
-      api.generation.onComplete(onC);
-      api.generation.onError(onE);
-      expect(bus.on).toHaveBeenCalledWith("generation:on-progress", onP);
-      expect(bus.on).toHaveBeenCalledWith("generation:on-complete", onC);
-      expect(bus.on).toHaveBeenCalledWith("generation:on-error", onE);
+    it("registers event callbacks via ipcRenderer.on", async () => {
+      const api = await loadPreload();
+      api.generation.onProgress(vi.fn());
+      api.generation.onComplete(vi.fn());
+      api.generation.onError(vi.fn());
+      expect(mockOn).toHaveBeenCalledWith(
+        "generation:on-progress",
+        expect.any(Function),
+      );
+      expect(mockOn).toHaveBeenCalledWith(
+        "generation:on-complete",
+        expect.any(Function),
+      );
+      expect(mockOn).toHaveBeenCalledWith(
+        "generation:on-error",
+        expect.any(Function),
+      );
     });
   });
 
   describe("snapshot namespace", () => {
-    it("delegates capture", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      const result = await api.snapshot.capture();
-      expect(h["snapshot:capture"]).toHaveBeenCalledOnce();
-      expect(result).toEqual({ filePath: "/tmp/snap.png" });
+    it("invokes capture", async () => {
+      const api = await loadPreload();
+      await api.snapshot.capture();
+      expect(mockInvoke).toHaveBeenCalledWith("snapshot:capture");
     });
   });
 
   describe("keys namespace", () => {
-    it("delegates get with keyId", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      const val = await api.keys.get("openai");
-      expect(h["keys:get"]).toHaveBeenCalledWith("openai");
-      expect(val).toBe("sk-123");
+    it("invokes get with keyId", async () => {
+      const api = await loadPreload();
+      await api.keys.get("openai");
+      expect(mockInvoke).toHaveBeenCalledWith("keys:get", "openai");
     });
 
-    it("delegates set with keyId and value", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes set with keyId and value", async () => {
+      const api = await loadPreload();
       await api.keys.set("openai", "sk-new");
-      expect(h["keys:set"]).toHaveBeenCalledWith("openai", "sk-new");
+      expect(mockInvoke).toHaveBeenCalledWith("keys:set", "openai", "sk-new");
     });
 
-    it("delegates remove", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
+    it("invokes remove", async () => {
+      const api = await loadPreload();
       await api.keys.remove("openai");
-      expect(h["keys:remove"]).toHaveBeenCalledWith("openai");
+      expect(mockInvoke).toHaveBeenCalledWith("keys:remove", "openai");
     });
 
-    it("delegates list", async () => {
-      const h = makeMockHandlers();
-      const api = createPreloadApi(h, makeMockEventBus());
-      const result = await api.keys.list();
-      expect(h["keys:list"]).toHaveBeenCalledOnce();
-      expect(result).toEqual(["openai", "fal"]);
+    it("invokes list", async () => {
+      const api = await loadPreload();
+      await api.keys.list();
+      expect(mockInvoke).toHaveBeenCalledWith("keys:list");
     });
-  });
-
-  it("handles missing handler gracefully (returns undefined)", () => {
-    const api = createPreloadApi({}, makeMockEventBus());
-    expect(api.auth.startSignIn()).toBeUndefined();
-    expect(api.window.expand()).toBeUndefined();
-    expect(api.generation.cancel()).toBeUndefined();
-    expect(api.snapshot.capture()).toBeUndefined();
-    expect(api.keys.list()).toBeUndefined();
-  });
-
-  it("handles missing eventBus gracefully", () => {
-    const api = createPreloadApi(makeMockHandlers(), undefined);
-    expect(() => api.window.onModeChanged(vi.fn())).not.toThrow();
-    expect(() => api.generation.onProgress(vi.fn())).not.toThrow();
   });
 });

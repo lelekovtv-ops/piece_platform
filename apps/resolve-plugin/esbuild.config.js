@@ -1,16 +1,32 @@
 import { build } from "esbuild";
 
-await build({
-  entryPoints: ["src/main/index.js"],
-  outfile: "dist/main/index.cjs",
+const commonOptions = {
   bundle: true,
   platform: "node",
   format: "cjs",
   target: "node20",
   sourcemap: true,
-  external: ["electron", "WorkflowIntegration"],
+  external: ["electron"],
+  banner: {
+    js: "var import_meta_url = require('url').pathToFileURL(__filename).href;",
+  },
   define: {
     "import.meta.dirname": "__dirname",
+    "import.meta.url": "import_meta_url",
   },
   logLevel: "info",
+};
+
+// Build main process entry point (Electron main)
+await build({
+  ...commonOptions,
+  entryPoints: ["src/main/index.js"],
+  outfile: "main.js",
+});
+
+// Build preload script (separate Electron preload)
+await build({
+  ...commonOptions,
+  entryPoints: ["src/main/preload.js"],
+  outfile: "preload.js",
 });

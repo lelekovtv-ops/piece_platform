@@ -1,0 +1,5 @@
+# esbuild output (Electron main process + preload)
+/main.js
+/main.js.map
+/preload.js
+/preload.js.map

@@ -13,8 +13,7 @@ function getResolvePluginsDir() {
 
   if (os === "darwin") {
     return join(
-      homedir(),
-      "Library",
+      "/Library",
       "Application Support",
       "Blackmagic Design",
       "DaVinci Resolve",

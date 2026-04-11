@@ -21,7 +21,8 @@ execSync("pnpm run build", { cwd: pluginRoot, stdio: "inherit" });
 // Step 2: Verify build artifacts
 console.log("\n[2/4] Verifying build artifacts...");
 const requiredFiles = [
-  "dist/main/index.cjs",
+  "main.js",
+  "preload.js",
   "dist/renderer/index.html",
   "manifest.xml",
 ];
@@ -44,10 +45,18 @@ mkdirSync(releaseDir, { recursive: true });
 // Copy manifest
 cpSync(join(pluginRoot, "manifest.xml"), join(releaseDir, "manifest.xml"));
 
-// Copy dist
-cpSync(join(pluginRoot, "dist"), join(releaseDir, "dist"), {
-  recursive: true,
-});
+// Copy main process and preload
+cpSync(join(pluginRoot, "main.js"), join(releaseDir, "main.js"));
+cpSync(join(pluginRoot, "preload.js"), join(releaseDir, "preload.js"));
+
+// Copy renderer dist
+cpSync(
+  join(pluginRoot, "dist", "renderer"),
+  join(releaseDir, "dist", "renderer"),
+  {
+    recursive: true,
+  },
+);
 
 // Copy installer scripts
 const installerSrc = join(pluginRoot, "src", "installer", "macos");

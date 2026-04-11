@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/main/index.cjs",
+  "main": "main.js",
   "scripts": {
     "dev": "pnpm run build && pnpm run link:dev",
     "dev:renderer": "vite --config vite.config.ts",
