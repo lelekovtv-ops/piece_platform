@@ -6,9 +6,8 @@ describe("Fish Audio TTS Provider", () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    fishAudio = await import(
-      "../../../../../src/main/providers/fish-audio/tts.js"
-    );
+    fishAudio =
+      await import("../../../../../src/main/providers/fish-audio/tts.js");
   });
 
   afterEach(() => {

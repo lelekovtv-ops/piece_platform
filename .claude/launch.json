@@ -1,0 +1,34 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "next", "dev"],
+      "port": 5201,
+      "autoPort": true,
+      "cwd": "apps/frontend"
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--watch", "src/index.js"],
+      "port": 4030,
+      "cwd": "apps/backend/piece"
+    },
+    {
+      "name": "websocket-gateway",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--watch", "src/index.js"],
+      "port": 4031,
+      "cwd": "apps/backend/websocket-gateway"
+    },
+    {
+      "name": "ws-collab",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["tsx", "src/index.ts"],
+      "port": 8080,
+      "cwd": "apps/frontend/server"
+    }
+  ]
+}
