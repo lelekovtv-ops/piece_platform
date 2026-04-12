@@ -46,6 +46,8 @@ declare global {
           prompt: string;
           apiKey: string;
           referenceImage?: string | null;
+          duration?: number;
+          referenceImages?: string[];
         }) => Promise<{ clipName: string; filePath?: string }>;
         cancel: () => Promise<void>;
         getStatus: () => Promise<string>;
@@ -62,6 +64,50 @@ declare global {
         remove: (keyId: string) => Promise<void>;
         list: () => Promise<string[]>;
       };
+      library: {
+        list: () => Promise<LibraryItem[]>;
+        import: (filePath: string) => Promise<{ path: string }>;
+        remove: (id: string) => Promise<void>;
+        getUrl: (id: string) => Promise<string>;
+      };
+      queue: {
+        add: (item: QueueAddInput) => Promise<QueueItem[]>;
+        list: () => Promise<QueueItem[]>;
+        cancel: (id: string) => Promise<QueueItem[]>;
+        clear: () => Promise<QueueItem[]>;
+        onUpdate: (cb: (items: QueueItem[]) => void) => void;
+      };
     };
+  }
+
+  interface LibraryItem {
+    id: string;
+    name: string;
+    path: string;
+    type: "image" | "video" | "audio";
+    url: string | null;
+    createdAt: number;
+    size: number;
+  }
+
+  interface QueueAddInput {
+    providerId: string;
+    prompt: string;
+    apiKey: string;
+    duration?: number;
+    referenceImages?: string[];
+  }
+
+  interface QueueItem {
+    id: string;
+    providerId: string;
+    prompt: string;
+    apiKey: string;
+    duration: number | null;
+    referenceImages: string[];
+    status: "pending" | "generating" | "done" | "error";
+    result: { clipName: string; filePath: string } | null;
+    error: string | null;
+    createdAt: number;
   }
 }

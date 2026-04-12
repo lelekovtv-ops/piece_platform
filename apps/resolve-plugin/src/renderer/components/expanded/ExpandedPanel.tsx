@@ -4,9 +4,11 @@ import { useAuthStore } from "../../stores/auth-store";
 import { useUiStore } from "../../stores/ui-store";
 import Tabs from "./Tabs";
 import GenerationPanel from "./GenerationPanel";
+import LibraryBar from "../library/LibraryBar";
+import { PROVIDER_MAP } from "../../constants/providers";
 
 export default function ExpandedPanel() {
-  const { activeTab, setActiveTab } = useGenerationStore();
+  const { activeTab, setActiveTab, provider } = useGenerationStore();
   const userName = useAuthStore((s) => s.user?.name || s.user?.email || "");
 
   const handleCollapse = useCallback(() => {
@@ -24,7 +26,7 @@ export default function ExpandedPanel() {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-violet-600 to-indigo-600">
+          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-linear-to-br from-violet-600 to-indigo-600">
             <svg
               className="h-3.5 w-3.5 text-white"
               fill="none"
@@ -72,6 +74,18 @@ export default function ExpandedPanel() {
       <div className="flex-1 overflow-y-auto px-4 py-3">
         <GenerationPanel />
       </div>
+
+      {/* Library Bar */}
+      <LibraryBar
+        selectionMode={!!provider}
+        maxReferences={
+          (provider &&
+            Object.values(PROVIDER_MAP)
+              .flat()
+              .find((p) => p.id === provider)?.maxReferences) ||
+          0
+        }
+      />
 
       {/* Footer */}
       <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-2">

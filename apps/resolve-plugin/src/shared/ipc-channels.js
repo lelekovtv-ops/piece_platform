@@ -40,3 +40,18 @@ export const KEYS_CHANNELS = Object.freeze({
   remove: "keys:remove",
   list: "keys:list",
 });
+
+export const LIBRARY_CHANNELS = Object.freeze({
+  list: "library:list",
+  import: "library:import",
+  remove: "library:remove",
+  getUrl: "library:get-url",
+});
+
+export const QUEUE_CHANNELS = Object.freeze({
+  add: "queue:add",
+  list: "queue:list",
+  cancel: "queue:cancel",
+  clear: "queue:clear",
+  onUpdate: "queue:on-update",
+});

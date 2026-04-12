@@ -2,10 +2,11 @@ import { join } from "path";
 import { writeFileSync, mkdirSync } from "fs";
 import { GENERATION_CHANNELS } from "../../shared/ipc-channels.js";
 import { importAndAppend } from "../resolve/media-pool.js";
+import { addToLibraryManifest } from "./library-handlers.js";
 
 export function registerGenerationHandlers(
   handlers,
-  { registry, downloadDir, logger },
+  { registry, downloadDir, dataDir, logger },
 ) {
   const log = logger.createComponentLogger
     ? logger.createComponentLogger("Generation")
@@ -14,7 +15,7 @@ export function registerGenerationHandlers(
   let currentStatus = "idle";
 
   handlers[GENERATION_CHANNELS.run] = async (params) => {
-    const { providerId, provider, apiKey, prompt, ...extra } = params || {};
+    const { providerId, provider, apiKey, prompt, duration, referenceImages, ...extra } = params || {};
     const resolvedProviderId = providerId || provider;
 
     if (!apiKey) {
@@ -33,10 +34,35 @@ export function registerGenerationHandlers(
     log.info("Generation started", {
       provider: resolvedProviderId,
       kind: providerObj.kind,
+      duration: duration || null,
+      refCount: referenceImages?.length || 0,
     });
 
     try {
-      const result = await providerObj.generate({ apiKey, prompt, ...extra });
+      const genParams = { apiKey, prompt, ...extra };
+      if (duration) genParams.duration = duration;
+
+      if (referenceImages && referenceImages.length > 0) {
+        const resolvedUrls = [];
+        for (const ref of referenceImages) {
+          if (ref.startsWith("http://") || ref.startsWith("https://")) {
+            resolvedUrls.push(ref);
+          } else {
+            const { uploadFileForUrl } = await import("../utils/upload.js");
+            const url = await uploadFileForUrl(ref);
+            resolvedUrls.push(url);
+          }
+        }
+
+        if (resolvedUrls.length === 1) {
+          genParams.image = resolvedUrls[0];
+        }
+        if (resolvedUrls.length > 0) {
+          genParams.image_list = resolvedUrls;
+        }
+      }
+
+      const result = await providerObj.generate(genParams);
 
       mkdirSync(downloadDir, { recursive: true });
 
@@ -52,6 +78,12 @@ export function registerGenerationHandlers(
         }
         const buf = Buffer.from(await resp.arrayBuffer());
         writeFileSync(filePath, buf);
+      }
+
+      try {
+        addToLibraryManifest(dataDir, filePath, { provider: resolvedProviderId });
+      } catch {
+        // Non-critical
       }
 
       let clipName = filename;

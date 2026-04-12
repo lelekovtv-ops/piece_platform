@@ -13,6 +13,10 @@ vi.mock("fs", () => ({
   mkdirSync: vi.fn(),
 }));
 
+vi.mock("../../../../src/main/ipc/library-handlers.js", () => ({
+  addToLibraryManifest: vi.fn(),
+}));
+
 const { registerGenerationHandlers } =
   await import("../../../../src/main/ipc/generation-handlers.js");
 const { importAndAppend } =
@@ -73,6 +77,7 @@ describe("registerGenerationHandlers", () => {
     registerGenerationHandlers(handlers, {
       registry,
       downloadDir: "/tmp/dl",
+      dataDir: "/tmp/data",
       logger,
     });
     expect(handlers[GENERATION_CHANNELS.run]).toBeDefined();
@@ -83,6 +88,7 @@ describe("registerGenerationHandlers", () => {
     registerGenerationHandlers(handlers, {
       registry,
       downloadDir: "/tmp/dl",
+      dataDir: "/tmp/data",
       logger,
     });
     expect(handlers[GENERATION_CHANNELS.cancel]).toBeDefined();
@@ -92,6 +98,7 @@ describe("registerGenerationHandlers", () => {
     registerGenerationHandlers(handlers, {
       registry,
       downloadDir: "/tmp/dl",
+      dataDir: "/tmp/data",
       logger,
     });
     expect(handlers[GENERATION_CHANNELS.getStatus]).toBeDefined();

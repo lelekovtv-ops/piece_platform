@@ -15,6 +15,7 @@ export function createConfig({ dataDir } = {}) {
     path.join(os.homedir(), ".piece-studio");
   const logDir = path.join(resolvedDataDir, "logs");
   const downloadDir = path.join(resolvedDataDir, "downloads");
+  const uploadsDir = path.join(resolvedDataDir, "uploads");
   const snapshotDir = path.join(resolvedDataDir, "snapshots");
 
   let fileConfig = {};
@@ -42,6 +43,7 @@ export function createConfig({ dataDir } = {}) {
     dataDir: resolvedDataDir,
     logDir,
     downloadDir,
+    uploadsDir,
     snapshotDir,
     get,
   };

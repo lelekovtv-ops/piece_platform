@@ -6,6 +6,8 @@ import {
   GENERATION_CHANNELS,
   SNAPSHOT_CHANNELS,
   KEYS_CHANNELS,
+  LIBRARY_CHANNELS,
+  QUEUE_CHANNELS,
 } from "../shared/ipc-channels.js";
 
 contextBridge.exposeInMainWorld("api", {
@@ -58,5 +60,20 @@ contextBridge.exposeInMainWorld("api", {
     set: (keyId, value) => ipcRenderer.invoke(KEYS_CHANNELS.set, keyId, value),
     remove: (keyId) => ipcRenderer.invoke(KEYS_CHANNELS.remove, keyId),
     list: () => ipcRenderer.invoke(KEYS_CHANNELS.list),
+  },
+  library: {
+    list: () => ipcRenderer.invoke(LIBRARY_CHANNELS.list),
+    import: (filePath) => ipcRenderer.invoke(LIBRARY_CHANNELS.import, filePath),
+    remove: (id) => ipcRenderer.invoke(LIBRARY_CHANNELS.remove, id),
+    getUrl: (id) => ipcRenderer.invoke(LIBRARY_CHANNELS.getUrl, id),
+  },
+  queue: {
+    add: (item) => ipcRenderer.invoke(QUEUE_CHANNELS.add, item),
+    list: () => ipcRenderer.invoke(QUEUE_CHANNELS.list),
+    cancel: (id) => ipcRenderer.invoke(QUEUE_CHANNELS.cancel, id),
+    clear: () => ipcRenderer.invoke(QUEUE_CHANNELS.clear),
+    onUpdate: (cb) => {
+      ipcRenderer.on(QUEUE_CHANNELS.onUpdate, (_e, data) => cb(data));
+    },
   },
 });

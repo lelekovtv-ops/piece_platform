@@ -14,6 +14,8 @@ import { registerSnapshotHandlers } from "./ipc/snapshot-handlers.js";
 import { registerAuthHandlers } from "./ipc/auth-handlers.js";
 import { registerLicenseHandlers } from "./ipc/license-handlers.js";
 import { registerWindowHandlers } from "./ipc/window-handlers.js";
+import { registerLibraryHandlers } from "./ipc/library-handlers.js";
+import { registerQueueHandlers } from "./ipc/queue-handlers.js";
 import * as registry from "./providers/registry.js";
 import "./providers/bootstrap.js";
 import { createLicenseCheck } from "./license/license-check.js";
@@ -115,6 +117,7 @@ function registerIpcHandlers() {
   registerGenerationHandlers(handlers, {
     registry,
     downloadDir: config.downloadDir,
+    dataDir: config.dataDir,
     logger,
   });
   registerKeysHandlers(handlers, {
@@ -124,6 +127,8 @@ function registerIpcHandlers() {
   });
   registerSnapshotHandlers(handlers, {
     snapshotDir: config.snapshotDir,
+    uploadsDir: config.uploadsDir,
+    dataDir: config.dataDir,
     logger,
   });
   registerAuthHandlers(handlers, {
@@ -133,6 +138,17 @@ function registerIpcHandlers() {
   });
   registerLicenseHandlers(handlers, { licenseCheck, devMode });
   registerWindowHandlers(handlers, { windowManager });
+  registerLibraryHandlers(handlers, {
+    downloadDir: config.downloadDir,
+    uploadsDir: config.uploadsDir,
+    dataDir: config.dataDir,
+    logger,
+  });
+  registerQueueHandlers(handlers, {
+    generateFn: (params) => handlers["generation:run"](params),
+    getMainWindow: () => mainWindow,
+    logger,
+  });
 
   // Bridge handlers dict to Electron ipcMain.handle
   for (const [channel, handler] of Object.entries(handlers)) {
