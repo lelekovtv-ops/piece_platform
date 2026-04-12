@@ -2,7 +2,6 @@
   "name": "@piece/resolve-plugin",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "main": "main.js",
   "scripts": {
     "dev": "pnpm run build && pnpm run link:dev",

@@ -20,7 +20,8 @@ import * as registry from "./providers/registry.js";
 import "./providers/bootstrap.js";
 import { createLicenseCheck } from "./license/license-check.js";
 import { loadToken } from "./auth/token-storage.js";
-import { WINDOW_CHANNELS } from "../shared/ipc-channels.js";
+import { WINDOW_CHANNELS, RESOLVE_CHANNELS } from "../shared/ipc-channels.js";
+import { listMediaPoolClips } from "./resolve/media-pool.js";
 
 export const PLUGIN_ID = "app.piece.studio";
 
@@ -138,6 +139,16 @@ function registerIpcHandlers() {
   });
   registerLicenseHandlers(handlers, { licenseCheck, devMode });
   registerWindowHandlers(handlers, { windowManager });
+
+  handlers[RESOLVE_CHANNELS.listClips] = () => {
+    try {
+      return listMediaPoolClips();
+    } catch (err) {
+      componentLogger.warn("Could not list Resolve clips", { error: err.message });
+      return [];
+    }
+  };
+
   registerLibraryHandlers(handlers, {
     downloadDir: config.downloadDir,
     uploadsDir: config.uploadsDir,

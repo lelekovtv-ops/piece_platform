@@ -8,6 +8,7 @@ import {
   KEYS_CHANNELS,
   LIBRARY_CHANNELS,
   QUEUE_CHANNELS,
+  RESOLVE_CHANNELS,
 } from "../shared/ipc-channels.js";
 
 contextBridge.exposeInMainWorld("api", {
@@ -60,6 +61,9 @@ contextBridge.exposeInMainWorld("api", {
     set: (keyId, value) => ipcRenderer.invoke(KEYS_CHANNELS.set, keyId, value),
     remove: (keyId) => ipcRenderer.invoke(KEYS_CHANNELS.remove, keyId),
     list: () => ipcRenderer.invoke(KEYS_CHANNELS.list),
+  },
+  resolve: {
+    listClips: () => ipcRenderer.invoke(RESOLVE_CHANNELS.listClips),
   },
   library: {
     list: () => ipcRenderer.invoke(LIBRARY_CHANNELS.list),

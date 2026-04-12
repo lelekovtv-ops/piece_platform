@@ -64,6 +64,9 @@ declare global {
         remove: (keyId: string) => Promise<void>;
         list: () => Promise<string[]>;
       };
+      resolve: {
+        listClips: () => Promise<ResolveClip[]>;
+      };
       library: {
         list: () => Promise<LibraryItem[]>;
         import: (filePath: string) => Promise<{ path: string }>;
@@ -88,6 +91,13 @@ declare global {
     url: string | null;
     createdAt: number;
     size: number;
+  }
+
+  interface ResolveClip {
+    name: string;
+    path: string;
+    folder: string;
+    type: string;
   }
 
   interface QueueAddInput {

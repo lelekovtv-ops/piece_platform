@@ -41,6 +41,10 @@ export const KEYS_CHANNELS = Object.freeze({
   list: "keys:list",
 });
 
+export const RESOLVE_CHANNELS = Object.freeze({
+  listClips: "resolve:list-clips",
+});
+
 export const LIBRARY_CHANNELS = Object.freeze({
   list: "library:list",
   import: "library:import",

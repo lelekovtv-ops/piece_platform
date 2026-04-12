@@ -17,9 +17,22 @@ vi.mock("../../../../src/main/logger.js", () => ({
 
 const mockMediaPoolItem = { GetName: vi.fn(() => "test.png") };
 const mockTimelineItem = { GetName: vi.fn(() => "test.png") };
+const mockPieceFolder = {
+  GetName: vi.fn(() => "PIECE Generations"),
+  GetClipList: vi.fn(() => []),
+  GetSubFolderList: vi.fn(() => []),
+};
+const mockRootFolder = {
+  GetName: vi.fn(() => "Master"),
+  GetSubFolderList: vi.fn(() => [mockPieceFolder]),
+  GetClipList: vi.fn(() => []),
+};
 const mockMediaPool = {
   ImportMedia: vi.fn(() => [mockMediaPoolItem]),
   AppendToTimeline: vi.fn(() => [mockTimelineItem]),
+  GetRootFolder: vi.fn(() => mockRootFolder),
+  SetCurrentFolder: vi.fn(),
+  AddSubFolder: vi.fn(() => mockPieceFolder),
 };
 const mockTimeline = {
   GetName: vi.fn(() => "Timeline 1"),
