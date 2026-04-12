@@ -9,7 +9,23 @@
       "Bash(pnpm --filter @piece/piece add ai @ai-sdk/openai @ai-sdk/anthropic)",
       "WebSearch",
       "WebFetch(domain:ai.google.dev)",
-      "Bash(pnpm dev:backend)"
+      "Bash(pnpm dev:backend)",
+      "Bash(mongosh 'mongodb://admin:changeme@localhost:27022/?authSource=admin' --quiet --eval ':*)",
+      "Bash(curl -s http://localhost:4030/v1/me/licenses -H 'Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYxIn0.eyJzdWIiOiI2OWQ3ODNkYzg4MjE4MWIwNjQ5MDM1YmIiLCJlbWFpbCI6ImxlbGVrb3YudHZAZ21haWwuY29tIiwicm9sZSI6Im93bmVyIiwianRpIjoiYjQxNDYwOWMtOTVjNi00OTgyLWFiYTAtNzBmYTJkN2VjNGI4IiwiaWF0IjoxNzc1OTQ1NDI0LCJleHAiOjE3NzU5NDYzMjR9.S5SU017a_xGUbpa4Vb68lG4723zyz9JM-dTITQleSDun4N3QZLeD2h9a12Sgkh0VIqent0YSNudeYgwrf8LxGNyiUhhEsfVk9VHAMunJMuTKyxtGPqQerhYn6FHc-lMyaFtROz_WEnzKGGhKNl9yGJ2pqYmsEptX4fRvDXoUln64ZI-Nt4SCVNVXOBEvV6UsVK8h0ivoWc2PBbFQcRRpZEGPcpOGLvHJ4d5QVmyr4oegyX7qoFW-yGF9AMjVVeWLW7I1-9Y5D9JJdi6DsMdiD9NjmwzJQNwg2OZAw8ukY7HEqTb-shgroUkVos-1Z_jvi99aei1kN7nge1MnJt48BA')",
+      "Read(//Library/Application Support/Blackmagic Design/DaVinci Resolve/Workflow Integration Plugins/PIECE Studio/**)",
+      "WebFetch(domain:sjinn.ai)",
+      "Bash(curl -s -X POST https://sjinn.ai/api/un-api/create_tool_task -H 'Authorization: Bearer eba43440-477b-494a-8039-867a49dbe67f' -H 'Content-Type: application/json' -d '{\"tool_type\":\"nano-banana-image-api\",\"input\":{\"prompt\":\"strawberry\",\"aspect_ratio\":\"16:9\"}}')",
+      "Bash(curl -s -X POST https://sjinn.ai/api/un-api/query_tool_task_status -H 'Authorization: Bearer eba43440-477b-494a-8039-867a49dbe67f' -H 'Content-Type: application/json' -d '{\"task_id\":\"24d079d3-6d66-43c1-ac87-fefc8614dbee\"}')",
+      "Bash(curl -s -I \"https://edit.comfyonline.app/result/cdec9a6c-1d6a-47c9-ab74-4619a3d04623.png\")",
+      "Bash(curl -s -X POST https://sjinn.ai/api/un-api/create_tool_task -H 'Authorization: Bearer eba43440-477b-494a-8039-867a49dbe67f' -H 'Content-Type: application/json' -d '{\"tool_type\":\"grok-text-to-video-api\",\"input\":{\"prompt\":\"strawberry falls on table\",\"aspect_ratio\":\"16:9\",\"duration\":5}}')",
+      "Bash(curl -s -X POST https://sjinn.ai/api/un-api/query_tool_task_status -H \"Authorization: Bearer eba43440-477b-494a-8039-867a49dbe67f\" -H \"Content-Type: application/json\" -d '{\"task_id\":\"e3f65391-e7cf-470f-bfb7-efd4f662959a\"}')",
+      "Bash(sudo rm:*)",
+      "Read(//Library/Application Support/Blackmagic Design/**)",
+      "Read(//Applications/**)",
+      "Bash(ls -d /Applications/*Resolve*)",
+      "Bash(defaults read:*)",
+      "Read(//Users/macbookbpm/Library/Logs/**)",
+      "Read(//Users/macbookbpm/Library/Preferences/**)"
     ]
   }
 }

@@ -14,6 +14,7 @@ These laws apply to ALL projects regardless of tech stack. They are non-negotiab
 
 6. **NO production code without a failing test first (TDD).** Write code before the test? Delete it. Start over.
 7. **NO skipping code review.** Review early, review often. "It's simple" is not a reason to skip.
+8. **NO speculative code.** If a solution "might work" or "should work" — don't ship it. Either verify it works or don't write it. Every change must be a known-correct fix, not a guess.
 
 ## Communication Laws
 

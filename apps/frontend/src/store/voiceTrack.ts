@@ -1,61 +1,61 @@
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
-import { safeStorage } from "@/lib/safeStorage"
-import { type DialogueLine, estimateDurationMs } from "@/store/dialogue"
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { safeStorage } from "@/lib/safeStorage";
+import { type DialogueLine, estimateDurationMs } from "@/store/dialogue";
 
 // ─── Types ───────────────────────────────────────────────────
 
-export type VoiceTrackId = "voice" | "vo" | "narration"
-export type AudioSourceType = "none" | "live" | "tts" | "uploaded"
-export type AnchorType = "scene-relative" | "shot-relative" | "absolute"
+export type VoiceTrackId = "voice" | "vo" | "narration";
+export type AudioSourceType = "none" | "live" | "tts" | "uploaded";
+export type AnchorType = "scene-relative" | "shot-relative" | "absolute";
 
 export interface VoiceClipAnchor {
-  type: AnchorType
-  sceneId?: string
-  shotIndex?: number
-  shotId?: string
-  absoluteMs?: number
-  offsetMs: number
+  type: AnchorType;
+  sceneId?: string;
+  shotIndex?: number;
+  shotId?: string;
+  absoluteMs?: number;
+  offsetMs: number;
 }
 
 export interface VoiceClip {
-  id: string
-  dialogueLineId: string | null
-  blockId?: string | null
+  id: string;
+  dialogueLineId: string | null;
+  blockId?: string | null;
 
   // Content
-  text: string
-  characterId: string
-  characterName: string
-  emotion?: string
-  lang: string
+  text: string;
+  characterId: string;
+  characterName: string;
+  emotion?: string;
+  lang: string;
 
   // Position
-  anchor: VoiceClipAnchor
-  duration: number
-  durationSource: "estimate" | "tts" | "audio"
+  anchor: VoiceClipAnchor;
+  duration: number;
+  durationSource: "estimate" | "tts" | "audio";
 
   // Mode
-  mode: "magnetic" | "free"
-  track: VoiceTrackId
+  mode: "magnetic" | "free";
+  track: VoiceTrackId;
 
   // Audio
-  audioSource: AudioSourceType
-  audioBlobKey?: string
-  waveformData?: number[]
+  audioSource: AudioSourceType;
+  audioBlobKey?: string;
+  waveformData?: number[];
 
   // Style
-  speed: number
-  pitch: number
-  volume: number
+  speed: number;
+  pitch: number;
+  volume: number;
 
   // Sync
-  textVersion: number
-  audioTextVersion?: number
+  textVersion: number;
+  audioTextVersion?: number;
 
   // Meta
-  order: number
-  locked: boolean
+  order: number;
+  locked: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────
@@ -63,7 +63,7 @@ export interface VoiceClip {
 const createId = () =>
   typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
     ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
 export function createVoiceClip(partial: Partial<VoiceClip> = {}): VoiceClip {
   return {
@@ -89,17 +89,17 @@ export function createVoiceClip(partial: Partial<VoiceClip> = {}): VoiceClip {
     audioTextVersion: partial.audioTextVersion,
     order: partial.order ?? 0,
     locked: partial.locked ?? false,
-  }
+  };
 }
 
 // ─── Resolve absolute start time from anchor ─────────────────
 
 export interface ShotInfo {
-  id: string
-  sceneId: string | null
-  startMs: number
-  duration: number
-  order: number
+  id: string;
+  sceneId: string | null;
+  startMs: number;
+  duration: number;
+  order: number;
 }
 
 /**
@@ -107,35 +107,35 @@ export interface ShotInfo {
  * Returns ms from timeline start.
  */
 export function resolveClipStartMs(clip: VoiceClip, shots: ShotInfo[]): number {
-  const { anchor } = clip
+  const { anchor } = clip;
 
   if (anchor.type === "absolute") {
-    return Math.max(0, anchor.absoluteMs ?? 0)
+    return Math.max(0, anchor.absoluteMs ?? 0);
   }
 
   if (anchor.type === "shot-relative" && anchor.shotId) {
-    const shot = shots.find((s) => s.id === anchor.shotId)
-    if (shot) return shot.startMs + anchor.offsetMs
+    const shot = shots.find((s) => s.id === anchor.shotId);
+    if (shot) return shot.startMs + anchor.offsetMs;
     // Shot deleted — fallback to scene-relative
   }
 
   if (anchor.type === "scene-relative" && anchor.sceneId != null) {
     const sceneShots = shots
       .filter((s) => s.sceneId === anchor.sceneId)
-      .sort((a, b) => a.order - b.order)
+      .sort((a, b) => a.order - b.order);
 
-    const idx = anchor.shotIndex ?? 0
-    const shot = sceneShots[idx] ?? sceneShots[0]
-    if (shot) return shot.startMs + anchor.offsetMs
+    const idx = anchor.shotIndex ?? 0;
+    const shot = sceneShots[idx] ?? sceneShots[0];
+    if (shot) return shot.startMs + anchor.offsetMs;
   }
 
   // Fallback: shot-relative with shotId
   if (anchor.shotId) {
-    const shot = shots.find((s) => s.id === anchor.shotId)
-    if (shot) return shot.startMs + anchor.offsetMs
+    const shot = shots.find((s) => s.id === anchor.shotId);
+    if (shot) return shot.startMs + anchor.offsetMs;
   }
 
-  return anchor.absoluteMs ?? anchor.offsetMs ?? 0
+  return anchor.absoluteMs ?? anchor.offsetMs ?? 0;
 }
 
 /**
@@ -147,10 +147,10 @@ export function resolveVoiceTimeline(
 ): { clip: VoiceClip; startMs: number; endMs: number }[] {
   return clips
     .map((clip) => {
-      const startMs = resolveClipStartMs(clip, shots)
-      return { clip, startMs, endMs: startMs + clip.duration }
+      const startMs = resolveClipStartMs(clip, shots);
+      return { clip, startMs, endMs: startMs + clip.duration };
     })
-    .sort((a, b) => a.startMs - b.startMs)
+    .sort((a, b) => a.startMs - b.startMs);
 }
 
 /**
@@ -165,16 +165,16 @@ export function getClipAtTime(
   const resolved = resolveVoiceTimeline(
     track ? clips.filter((c) => c.track === track) : clips,
     shots,
-  )
-  return resolved.find((r) => timeMs >= r.startMs && timeMs < r.endMs) ?? null
+  );
+  return resolved.find((r) => timeMs >= r.startMs && timeMs < r.endMs) ?? null;
 }
 
 // ─── Generate from DialogueLines ─────────────────────────────
 
 interface ShotRef {
-  id: string
-  sceneId: string | null
-  order: number
+  id: string;
+  sceneId: string | null;
+  order: number;
 }
 
 /**
@@ -187,57 +187,67 @@ export function generateVoiceClipsFromDialogue(
   existingClips: VoiceClip[] = [],
 ): VoiceClip[] {
   const existingByLineId = new Map(
-    existingClips.filter((c) => c.dialogueLineId).map((c) => [c.dialogueLineId!, c]),
-  )
+    existingClips
+      .filter((c) => c.dialogueLineId)
+      .map((c) => [c.dialogueLineId!, c]),
+  );
 
-  const clips: VoiceClip[] = []
+  const clips: VoiceClip[] = [];
 
   // Keep manually-added clips (no dialogueLineId)
   for (const clip of existingClips) {
-    if (!clip.dialogueLineId) clips.push(clip)
+    if (!clip.dialogueLineId) clips.push(clip);
   }
 
   // Track accumulated offset per shot to stagger clips sequentially
-  const shotAccumulatedOffset = new Map<string, number>()
+  const shotAccumulatedOffset = new Map<string, number>();
   // Track which shot index we're on per scene
-  const sceneShotIndex = new Map<string, number>()
+  const sceneShotIndex = new Map<string, number>();
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const existing = existingByLineId.get(line.id)
+    const line = lines[i];
+    const existing = existingByLineId.get(line.id);
 
     // If clip exists and is locked or manually edited, keep it
     if (existing && (existing.locked || existing.text !== line.text)) {
-      const isStale = existing.text !== line.text
+      const isStale = existing.text !== line.text;
       clips.push(
         isStale
           ? { ...existing, textVersion: existing.textVersion + 1 }
           : existing,
-      )
-      continue
+      );
+      continue;
     }
 
     // Detect track type
     const track: VoiceTrackId =
-      line.type === "voiceover" ? "vo" : line.type === "narration" ? "narration" : "voice"
+      line.type === "voiceover"
+        ? "vo"
+        : line.type === "narration"
+          ? "narration"
+          : "voice";
 
     // Find best shot to anchor to
     const sceneShots = line.sceneId
-      ? shots.filter((s) => s.sceneId === line.sceneId).sort((a, b) => a.order - b.order)
-      : []
+      ? shots
+          .filter((s) => s.sceneId === line.sceneId)
+          .sort((a, b) => a.order - b.order)
+      : [];
 
-    const sceneKey = line.sceneId ?? "__none__"
-    const shotIdx = sceneShotIndex.get(sceneKey) ?? 0
-    const anchorShot = sceneShots[Math.min(shotIdx, sceneShots.length - 1)] ?? shots[0]
+    const sceneKey = line.sceneId ?? "__none__";
+    const shotIdx = sceneShotIndex.get(sceneKey) ?? 0;
+    const anchorShot =
+      sceneShots[Math.min(shotIdx, sceneShots.length - 1)] ?? shots[0];
 
-    const duration = existing?.durationSource === "audio"
-      ? existing.duration
-      : estimateDurationMs(line.text, line.type)
+    const duration =
+      existing?.durationSource === "audio"
+        ? existing.duration
+        : estimateDurationMs(line.text, line.type);
 
     // Calculate offset: accumulate within the same shot
-    const shotKey = anchorShot?.id ?? "__none__"
-    const currentOffset = shotAccumulatedOffset.get(shotKey) ?? 200
-    shotAccumulatedOffset.set(shotKey, currentOffset + duration + 150) // 150ms gap between clips
+    const shotKey = anchorShot?.id ?? "__none__";
+    const currentOffset = shotAccumulatedOffset.get(shotKey) ?? 200;
+    shotAccumulatedOffset.set(shotKey, currentOffset + duration + 150); // 150ms gap between clips
 
     const anchor: VoiceClipAnchor = anchorShot
       ? {
@@ -247,13 +257,13 @@ export function generateVoiceClipsFromDialogue(
           shotIndex: anchorShot.order,
           offsetMs: currentOffset,
         }
-      : { type: "absolute", absoluteMs: 0, offsetMs: 0 }
+      : { type: "absolute", absoluteMs: 0, offsetMs: 0 };
 
     // Advance to next shot if accumulated offset exceeds reasonable threshold
     // (move to next shot when current one is "full")
-    const accumulated = shotAccumulatedOffset.get(shotKey) ?? 0
+    const accumulated = shotAccumulatedOffset.get(shotKey) ?? 0;
     if (accumulated > 4000 && shotIdx < sceneShots.length - 1) {
-      sceneShotIndex.set(sceneKey, shotIdx + 1)
+      sceneShotIndex.set(sceneKey, shotIdx + 1);
     }
 
     clips.push(
@@ -281,10 +291,10 @@ export function generateVoiceClipsFromDialogue(
         order: i,
         locked: false,
       }),
-    )
+    );
   }
 
-  return clips.sort((a, b) => a.order - b.order)
+  return clips.sort((a, b) => a.order - b.order);
 }
 
 // ─── Migrate anchors after re-breakdown ──────────────────────
@@ -295,62 +305,70 @@ export function migrateAnchorsAfterRebreakdown(
   newShots: ShotRef[],
 ): VoiceClip[] {
   return clips.map((clip) => {
-    if (clip.anchor.type === "absolute") return clip
+    if (clip.anchor.type === "absolute") return clip;
 
-    const { shotId, sceneId, shotIndex } = clip.anchor
+    const { shotId, sceneId, shotIndex } = clip.anchor;
 
     // Try to find matching new shot
     // 1. By sceneId + shotIndex
     if (sceneId) {
-      const sceneShots = newShots.filter((s) => s.sceneId === sceneId).sort((a, b) => a.order - b.order)
-      const idx = shotIndex ?? 0
-      const match = sceneShots[Math.min(idx, sceneShots.length - 1)]
+      const sceneShots = newShots
+        .filter((s) => s.sceneId === sceneId)
+        .sort((a, b) => a.order - b.order);
+      const idx = shotIndex ?? 0;
+      const match = sceneShots[Math.min(idx, sceneShots.length - 1)];
       if (match) {
         return {
           ...clip,
           anchor: { ...clip.anchor, shotId: match.id, shotIndex: match.order },
-        }
+        };
       }
     }
 
     // 2. Fallback: same order position
-    const oldShot = oldShots.find((s) => s.id === shotId)
+    const oldShot = oldShots.find((s) => s.id === shotId);
     if (oldShot) {
-      const match = newShots[Math.min(oldShot.order, newShots.length - 1)]
+      const match = newShots[Math.min(oldShot.order, newShots.length - 1)];
       if (match) {
         return {
           ...clip,
-          anchor: { ...clip.anchor, shotId: match.id, sceneId: match.sceneId ?? undefined },
-        }
+          anchor: {
+            ...clip.anchor,
+            shotId: match.id,
+            sceneId: match.sceneId ?? undefined,
+          },
+        };
       }
     }
 
     // 3. Fallback: go free
-    const resolved = clip.anchor.absoluteMs ?? clip.anchor.offsetMs ?? 0
+    const resolved = clip.anchor.absoluteMs ?? clip.anchor.offsetMs ?? 0;
     return {
       ...clip,
       mode: "free" as const,
       anchor: { type: "absolute" as const, absoluteMs: resolved, offsetMs: 0 },
-    }
-  })
+    };
+  });
 }
 
 // ─── Voice Track Channels (per-character grouping) ──────────
 
 export interface VoiceTrackChannel {
-  id: string
-  characterId: string
-  characterName: string
-  voiceConfigId: string | null
-  clipIds: string[]
+  id: string;
+  characterId: string;
+  characterName: string;
+  voiceConfigId: string | null;
+  clipIds: string[];
 }
 
 /** Build channels from clips — groups by character. */
-export function buildChannelsFromClips(clips: VoiceClip[]): VoiceTrackChannel[] {
-  const map = new Map<string, VoiceTrackChannel>()
+export function buildChannelsFromClips(
+  clips: VoiceClip[],
+): VoiceTrackChannel[] {
+  const map = new Map<string, VoiceTrackChannel>();
 
   for (const clip of clips) {
-    const key = clip.characterId || clip.characterName || "__narrator__"
+    const key = clip.characterId || clip.characterName || "__narrator__";
     if (!map.has(key)) {
       map.set(key, {
         id: `ch-${key}`,
@@ -358,67 +376,90 @@ export function buildChannelsFromClips(clips: VoiceClip[]): VoiceTrackChannel[] 
         characterName: clip.characterName || "Narrator",
         voiceConfigId: null,
         clipIds: [],
-      })
+      });
     }
-    map.get(key)!.clipIds.push(clip.id)
+    map.get(key)!.clipIds.push(clip.id);
   }
 
-  return Array.from(map.values())
+  return Array.from(map.values());
 }
 
 // ─── Store ───────────────────────────────────────────────────
 
 type ProjectVoiceTrack = {
-  clips: VoiceClip[]
-}
+  clips: VoiceClip[];
+};
 
 interface VoiceTrackState {
-  activeProjectId: string | null
-  projectVoiceTracks: Record<string, ProjectVoiceTrack>
-  clips: VoiceClip[]
-  selectedClipId: string | null
+  activeProjectId: string | null;
+  projectVoiceTracks: Record<string, ProjectVoiceTrack>;
+  clips: VoiceClip[];
+  selectedClipId: string | null;
 
   // Actions
-  setActiveProject: (projectId: string | null) => void
-  setClips: (clips: VoiceClip[]) => void
-  addClip: (partial?: Partial<VoiceClip>) => string
-  updateClip: (id: string, patch: Partial<VoiceClip>) => void
-  removeClip: (id: string) => void
-  selectClip: (id: string | null) => void
+  setActiveProject: (projectId: string | null) => void;
+  setClips: (clips: VoiceClip[]) => void;
+  addClip: (partial?: Partial<VoiceClip>) => string;
+  updateClip: (id: string, patch: Partial<VoiceClip>) => void;
+  removeClip: (id: string) => void;
+  selectClip: (id: string | null) => void;
 
   /** Split a clip at a given character position in text */
-  splitClip: (id: string, charIndex: number) => void
+  splitClip: (id: string, charIndex: number) => void;
 
   /** Merge two adjacent clips of the same character */
-  mergeClips: (idA: string, idB: string) => void
+  mergeClips: (idA: string, idB: string) => void;
 
   /** Move clip anchor (drag on timeline) */
-  moveClip: (id: string, newAnchor: Partial<VoiceClipAnchor>) => void
+  moveClip: (id: string, newAnchor: Partial<VoiceClipAnchor>) => void;
 
   /** Resize clip duration (drag edge) */
-  resizeClip: (id: string, newDuration: number) => void
+  resizeClip: (id: string, newDuration: number) => void;
 
   /** Generate clips from dialogue lines */
-  generateFromDialogue: (lines: DialogueLine[], shots: ShotRef[]) => void
+  generateFromDialogue: (lines: DialogueLine[], shots: ShotRef[]) => void;
 
   /** Generate clips from placement engine data (content-aware positioning) */
   generateFromPlacement: (
-    placedVoice: { dialogueBlockId: string; speaker: string; text: string; startMs: number; durationMs: number; coveringShotId: string | null; isVO: boolean }[],
-    placedShots: { shotId: string; sceneId: string; startMs: number; durationMs: number }[],
+    placedVoice: {
+      dialogueBlockId: string;
+      speaker: string;
+      text: string;
+      startMs: number;
+      durationMs: number;
+      coveringShotId: string | null;
+      isVO: boolean;
+    }[],
+    placedShots: {
+      shotId: string;
+      sceneId: string;
+      startMs: number;
+      durationMs: number;
+    }[],
     sceneId: string,
-  ) => void
+  ) => void;
+
+  /** Generate TTS audio for a single clip */
+  generateTtsForClip: (clipId: string) => Promise<void>;
+
+  /** Generate TTS audio for all clips without audio */
+  generateAllTts: () => Promise<{ done: number; failed: number }>;
 
   /** Clear all voice clips */
-  clearTrack: () => void
+  clearTrack: () => void;
 }
 
-const createEmptyTrack = (): ProjectVoiceTrack => ({ clips: [] })
+const createEmptyTrack = (): ProjectVoiceTrack => ({ clips: [] });
+
+/** Module-level map of clip ID → blob URL for TTS playback */
+export const ttsAudioUrls = new Map<string, string>();
 
 function updateCurrentProject(
   state: VoiceTrackState,
   patch: Partial<ProjectVoiceTrack>,
 ): Pick<VoiceTrackState, "projectVoiceTracks"> {
-  if (!state.activeProjectId) return { projectVoiceTracks: state.projectVoiceTracks }
+  if (!state.activeProjectId)
+    return { projectVoiceTracks: state.projectVoiceTracks };
   return {
     projectVoiceTracks: {
       ...state.projectVoiceTracks,
@@ -426,7 +467,7 @@ function updateCurrentProject(
         clips: patch.clips ?? state.clips,
       },
     },
-  }
+  };
 }
 
 export const useVoiceTrackStore = create<VoiceTrackState>()(
@@ -438,78 +479,97 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
       selectedClipId: null,
 
       setActiveProject: (projectId) => {
-        const state = get()
+        const state = get();
         const updated = state.activeProjectId
-          ? { ...state.projectVoiceTracks, [state.activeProjectId]: { clips: state.clips } }
-          : state.projectVoiceTracks
+          ? {
+              ...state.projectVoiceTracks,
+              [state.activeProjectId]: { clips: state.clips },
+            }
+          : state.projectVoiceTracks;
 
-        const project = projectId ? (updated[projectId] ?? createEmptyTrack()) : createEmptyTrack()
+        const project = projectId
+          ? (updated[projectId] ?? createEmptyTrack())
+          : createEmptyTrack();
 
         set({
           activeProjectId: projectId,
           projectVoiceTracks: updated,
           clips: project.clips,
           selectedClipId: null,
-        })
+        });
       },
 
       setClips: (clips) =>
-        set((state) => ({ clips, ...updateCurrentProject({ ...state, clips }, { clips }) })),
+        set((state) => ({
+          clips,
+          ...updateCurrentProject({ ...state, clips }, { clips }),
+        })),
 
       addClip: (partial = {}) => {
-        const clip = createVoiceClip({ ...partial, order: get().clips.length })
+        const clip = createVoiceClip({ ...partial, order: get().clips.length });
         set((state) => {
-          const clips = [...state.clips, clip]
-          return { clips, selectedClipId: clip.id, ...updateCurrentProject({ ...state, clips }, { clips }) }
-        })
-        return clip.id
+          const clips = [...state.clips, clip];
+          return {
+            clips,
+            selectedClipId: clip.id,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
+        });
+        return clip.id;
       },
 
       updateClip: (id, patch) =>
         set((state) => {
-          const clips = state.clips.map((c) => (c.id === id ? { ...c, ...patch } : c))
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          const clips = state.clips.map((c) =>
+            c.id === id ? { ...c, ...patch } : c,
+          );
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       removeClip: (id) =>
         set((state) => {
-          const clips = state.clips.filter((c) => c.id !== id)
+          const clips = state.clips.filter((c) => c.id !== id);
           return {
             clips,
-            selectedClipId: state.selectedClipId === id ? null : state.selectedClipId,
+            selectedClipId:
+              state.selectedClipId === id ? null : state.selectedClipId,
             ...updateCurrentProject({ ...state, clips }, { clips }),
-          }
+          };
         }),
 
       selectClip: (id) => set({ selectedClipId: id }),
 
       splitClip: (id, charIndex) =>
         set((state) => {
-          const clip = state.clips.find((c) => c.id === id)
-          if (!clip || charIndex <= 0 || charIndex >= clip.text.length) return state
+          const clip = state.clips.find((c) => c.id === id);
+          if (!clip || charIndex <= 0 || charIndex >= clip.text.length)
+            return state;
 
           // Find a sentence boundary near charIndex
-          const text = clip.text
-          let splitAt = charIndex
+          const text = clip.text;
+          let splitAt = charIndex;
           // Try to find nearest sentence end (. ! ?)
           for (let d = 0; d < 20; d++) {
             if (splitAt + d < text.length && /[.!?]/.test(text[splitAt + d])) {
-              splitAt = splitAt + d + 1
-              break
+              splitAt = splitAt + d + 1;
+              break;
             }
             if (splitAt - d > 0 && /[.!?]/.test(text[splitAt - d])) {
-              splitAt = splitAt - d + 1
-              break
+              splitAt = splitAt - d + 1;
+              break;
             }
           }
 
-          const textA = text.slice(0, splitAt).trim()
-          const textB = text.slice(splitAt).trim()
-          if (!textA || !textB) return state
+          const textA = text.slice(0, splitAt).trim();
+          const textB = text.slice(splitAt).trim();
+          if (!textA || !textB) return state;
 
-          const ratio = textA.length / text.length
-          const durationA = Math.round(clip.duration * ratio)
-          const durationB = clip.duration - durationA
+          const ratio = textA.length / text.length;
+          const durationA = Math.round(clip.duration * ratio);
+          const durationB = clip.duration - durationA;
 
           const clipA: VoiceClip = {
             ...clip,
@@ -520,7 +580,7 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
             audioBlobKey: undefined,
             waveformData: undefined,
             textVersion: clip.textVersion + 1,
-          }
+          };
 
           const clipB: VoiceClip = {
             ...clip,
@@ -538,23 +598,26 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
             },
             order: clip.order + 0.5, // will be normalized
             textVersion: 1,
-          }
+          };
 
           const clips = state.clips
             .map((c) => (c.id === id ? clipA : c))
             .concat(clipB)
             .sort((a, b) => a.order - b.order)
-            .map((c, i) => ({ ...c, order: i }))
+            .map((c, i) => ({ ...c, order: i }));
 
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       mergeClips: (idA, idB) =>
         set((state) => {
-          const clipA = state.clips.find((c) => c.id === idA)
-          const clipB = state.clips.find((c) => c.id === idB)
-          if (!clipA || !clipB) return state
-          if (clipA.characterId !== clipB.characterId) return state
+          const clipA = state.clips.find((c) => c.id === idA);
+          const clipB = state.clips.find((c) => c.id === idB);
+          if (!clipA || !clipB) return state;
+          if (clipA.characterId !== clipB.characterId) return state;
 
           const merged: VoiceClip = {
             ...clipA,
@@ -565,62 +628,86 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
             audioBlobKey: undefined,
             waveformData: undefined,
             textVersion: clipA.textVersion + 1,
-          }
+          };
 
           const clips = state.clips
             .filter((c) => c.id !== idB)
-            .map((c) => (c.id === idA ? merged : c))
+            .map((c) => (c.id === idA ? merged : c));
 
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       moveClip: (id, newAnchor) =>
         set((state) => {
           const clips = state.clips.map((c) =>
             c.id === id ? { ...c, anchor: { ...c.anchor, ...newAnchor } } : c,
-          )
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          );
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       resizeClip: (id, newDuration) =>
         set((state) => {
-          const duration = Math.max(200, newDuration)
+          const duration = Math.max(200, newDuration);
           const clips = state.clips.map((c) =>
-            c.id === id ? { ...c, duration, durationSource: "estimate" as const } : c,
-          )
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+            c.id === id
+              ? { ...c, duration, durationSource: "estimate" as const }
+              : c,
+          );
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       generateFromDialogue: (lines, shots) =>
         set((state) => {
-          const clips = generateVoiceClipsFromDialogue(lines, shots, state.clips)
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          const clips = generateVoiceClipsFromDialogue(
+            lines,
+            shots,
+            state.clips,
+          );
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
 
       generateFromPlacement: (placedVoice, placedShots, sceneId) =>
         set((state) => {
           // Keep clips from other scenes + locked/manual clips from this scene
-          const preserved = state.clips.filter((c) =>
-            c.locked || c.dialogueLineId === null ||
-            !placedVoice.some((pv) => pv.dialogueBlockId === c.dialogueLineId),
-          )
+          const preserved = state.clips.filter(
+            (c) =>
+              c.locked ||
+              c.dialogueLineId === null ||
+              !placedVoice.some(
+                (pv) => pv.dialogueBlockId === c.dialogueLineId,
+              ),
+          );
 
           const newClips: VoiceClip[] = placedVoice.map((pv, i) => {
             // Find the covering shot for anchor
-            const coveringShot = placedShots.find((ps) => ps.shotId === pv.coveringShotId)
+            const coveringShot = placedShots.find(
+              (ps) => ps.shotId === pv.coveringShotId,
+            );
 
             const anchor: VoiceClipAnchor = coveringShot
               ? {
-                type: "shot-relative" as AnchorType,
-                shotId: coveringShot.shotId,
-                sceneId,
-                offsetMs: pv.startMs - coveringShot.startMs,
-              }
+                  type: "shot-relative" as AnchorType,
+                  shotId: coveringShot.shotId,
+                  sceneId,
+                  offsetMs: pv.startMs - coveringShot.startMs,
+                }
               : {
-                type: "absolute" as AnchorType,
-                absoluteMs: pv.startMs,
-                offsetMs: 0,
-              }
+                  type: "absolute" as AnchorType,
+                  absoluteMs: pv.startMs,
+                  offsetMs: 0,
+                };
 
             return {
               id: `vc-placement-${Date.now()}-${i}`,
@@ -634,7 +721,9 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
               duration: pv.durationMs,
               durationSource: "estimate" as const,
               mode: "magnetic" as const,
-              track: pv.isVO ? "vo" as VoiceTrackId : "voice" as VoiceTrackId,
+              track: pv.isVO
+                ? ("vo" as VoiceTrackId)
+                : ("voice" as VoiceTrackId),
               audioSource: "none" as AudioSourceType,
               speed: 1,
               pitch: 1,
@@ -642,17 +731,122 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
               textVersion: 1,
               order: i,
               locked: false,
-            }
-          })
+            };
+          });
 
-          const clips = [...preserved, ...newClips]
-          return { clips, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          const clips = [...preserved, ...newClips];
+          return {
+            clips,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
+
+      generateTtsForClip: async (clipId: string) => {
+        const clip = get().clips.find((c) => c.id === clipId);
+        if (!clip || !clip.text.trim()) return;
+
+        const { generateSpeech, detectBestProvider } =
+          await import("@/lib/ttsProvider");
+        const { useBibleStore } = await import("@/store/bible");
+        const characters = useBibleStore.getState().characters;
+        const character = characters.find(
+          (c) => c.id === clip.characterId || c.name === clip.characterName,
+        );
+        const voiceCfg = character?.voice;
+
+        // Use Bible voice config if available, otherwise fallback to auto-detect
+        const provider =
+          voiceCfg?.provider === "web-speech" ||
+          voiceCfg?.provider === "elevenlabs" ||
+          voiceCfg?.provider === "fish-audio"
+            ? voiceCfg.provider
+            : detectBestProvider();
+
+        const request: import("@/lib/ttsProvider").TtsRequest = {
+          text: clip.text,
+          lang: clip.lang,
+          voiceId: voiceCfg?.voiceId || undefined,
+          speed: clip.speed,
+          pitch: clip.pitch,
+          providerSettings: voiceCfg?.settings,
+        };
+
+        // Web-speech fallback: pick gender-appropriate voice if no voiceId configured
+        if (
+          provider === "web-speech" &&
+          !request.voiceId &&
+          typeof window !== "undefined"
+        ) {
+          const isFemale = character?.gender === "female";
+          const voices = window.speechSynthesis.getVoices();
+          const langVoices = voices.filter((v) =>
+            v.lang.startsWith(clip.lang.split("-")[0]),
+          );
+          const preferred = langVoices.find((v) =>
+            isFemale
+              ? /female|woman|zira|svetlana|milena|alice|anna/i.test(v.name)
+              : /male|man|dmitry|daniel|pavel|google.*male/i.test(v.name),
+          );
+          if (preferred) request.voiceId = preferred.voiceURI;
+        }
+
+        const result = await generateSpeech(request, provider);
+
+        if (result.audioBlob.size > 0) {
+          const blobKey = `voice-${clipId}-${Date.now()}`;
+          const url = URL.createObjectURL(result.audioBlob);
+          const updateClip = get().updateClip;
+
+          // Clean up old blob from IndexedDB if re-generating
+          const oldKey = clip.audioBlobKey;
+          if (oldKey) {
+            import("@/lib/fileStorage").then(({ deleteBlob }) =>
+              deleteBlob(oldKey).catch(() => {}),
+            );
+          }
+
+          updateClip(clipId, {
+            audioSource: "tts",
+            audioBlobKey: blobKey,
+            duration: result.durationMs || clip.duration,
+            durationSource: "tts",
+          });
+
+          // Persist blob to IndexedDB for cross-session survival
+          import("@/lib/fileStorage").then(({ trySaveBlob }) =>
+            trySaveBlob(blobKey, result.audioBlob),
+          );
+
+          // Store blob URL in a module-level map so playback can find it
+          ttsAudioUrls.set(clipId, url);
+        }
+      },
+
+      generateAllTts: async () => {
+        const clips = get().clips.filter(
+          (c) => c.audioSource === "none" && c.text.trim(),
+        );
+        let done = 0;
+        let failed = 0;
+        for (const clip of clips) {
+          try {
+            await get().generateTtsForClip(clip.id);
+            done++;
+          } catch {
+            failed++;
+          }
+        }
+        return { done, failed };
+      },
 
       clearTrack: () =>
         set((state) => {
-          const clips: VoiceClip[] = []
-          return { clips, selectedClipId: null, ...updateCurrentProject({ ...state, clips }, { clips }) }
+          const clips: VoiceClip[] = [];
+          return {
+            clips,
+            selectedClipId: null,
+            ...updateCurrentProject({ ...state, clips }, { clips }),
+          };
         }),
     }),
     {
@@ -663,12 +857,30 @@ export const useVoiceTrackStore = create<VoiceTrackState>()(
         projectVoiceTracks: state.projectVoiceTracks,
       }),
       onRehydrateStorage: () => (state) => {
-        if (!state) return
-        const projectId = state.activeProjectId
+        if (!state) return;
+        const projectId = state.activeProjectId;
         if (projectId && state.projectVoiceTracks[projectId]) {
-          state.clips = state.projectVoiceTracks[projectId].clips
+          state.clips = state.projectVoiceTracks[projectId].clips;
+        }
+
+        // Restore TTS audio blobs from IndexedDB into the playback map
+        const clips = state.clips;
+        const blobKeys = clips
+          .filter((c) => c.audioSource === "tts" && c.audioBlobKey)
+          .map((c) => ({ clipId: c.id, blobKey: c.audioBlobKey! }));
+
+        if (blobKeys.length > 0) {
+          import("@/lib/fileStorage").then(({ restoreAllBlobs }) => {
+            const keys = blobKeys.map((b) => b.blobKey);
+            restoreAllBlobs(keys).then((restored) => {
+              for (const { clipId, blobKey } of blobKeys) {
+                const url = restored.get(blobKey);
+                if (url) ttsAudioUrls.set(clipId, url);
+              }
+            });
+          });
         }
       },
     },
   ),
-)
+);

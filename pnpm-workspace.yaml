@@ -1,5 +1,6 @@
 packages:
-  - 'packages/*'
-  - 'apps/backend/*'
-  - 'apps/frontend'
-  - 'tools/*'
+  - "packages/*"
+  - "apps/backend/*"
+  - "apps/frontend"
+  - "apps/resolve-plugin"
+  - "tools/*"
