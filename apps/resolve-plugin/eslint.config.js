@@ -18,6 +18,8 @@ export default [
         fetch: "readonly",
         AbortController: "readonly",
         structuredClone: "readonly",
+        Blob: "readonly",
+        FormData: "readonly",
       },
     },
     rules: {
