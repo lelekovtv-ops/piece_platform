@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Background,
@@ -78,8 +77,22 @@ export default function Canvas({ onBack }: CanvasProps) {
   const appTheme = useThemeStore((s) => s.theme)
   const canvasBg = appTheme === "architect" ? "#080808" : appTheme === "synthwave" ? "#0a0614" : "#FAF6F1"
   const [activeTool, setActiveTool] = useState<BoardTool>("select")
+  const [spaceHeld, setSpaceHeld] = useState(false)
   const [nodesState, setNodesState, onNodesChangeBase] = useNodesState(nodes)
   const [edgesState, , onEdgesChange] = useEdgesState(edges)
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault()
+        setSpaceHeld(true)
+      }
+    }
+    const up = (e: KeyboardEvent) => { if (e.code === "Space") setSpaceHeld(false) }
+    window.addEventListener("keydown", down)
+    window.addEventListener("keyup", up)
+    return () => { window.removeEventListener("keydown", down); window.removeEventListener("keyup", up) }
+  }, [])
   const customNodePositionsRef = useRef<Record<string, { x: number; y: number }>>({})
   const [editorMode, setEditorMode] = useState<{
     active: boolean
@@ -149,11 +162,9 @@ export default function Canvas({ onBack }: CanvasProps) {
     }, 40)
   }
 
-  const router = useRouter()
   const enterEditor = useCallback((nodeId: string, type: 'new' | 'upload', initialRect: NodeScreenRect) => {
     setEditorMode({ active: true, nodeId, type, initialRect })
-    router.push("/")
-  }, [router])
+  }, [])
 
   const handleCloseStart = useCallback(() => {
     reactFlowRef.current?.zoomOut({ duration: 400 })
@@ -254,13 +265,15 @@ export default function Canvas({ onBack }: CanvasProps) {
           maxZoom={2}
           zoomOnScroll
           zoomOnPinch
-          panOnScroll
-          panOnDrag={activeTool === "pan" ? [0, 1] : [1]}
+          panOnScroll={false}
+          panOnDrag
           style={{
             backgroundColor: canvasBg,
-            cursor: activeTool === "sticky" || activeTool === "text" || activeTool === "image"
-              ? "crosshair"
-              : activeTool === "pan" ? "grab" : "default",
+            cursor: spaceHeld || activeTool === "pan"
+              ? "grab"
+              : activeTool === "sticky" || activeTool === "text" || activeTool === "image"
+                ? "crosshair"
+                : "default",
           }}
           proOptions={{ hideAttribution: true }}
         >

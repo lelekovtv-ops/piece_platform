@@ -32,6 +32,9 @@ import { registerPipelineRoutes } from "./modules/pipeline/routes.js";
 import { registerSettingsRoutes } from "./modules/settings/routes.js";
 import { registerTranslateRoutes } from "./modules/translate/routes.js";
 import { registerAiToolsRoutes } from "./modules/ai-tools/routes.js";
+import { registerDeviceCodeRoutes } from "./modules/auth/device-code-routes.js";
+import { registerLicenseRoutes } from "./modules/users/license-routes.js";
+import { createDesktopTokenMiddleware } from "./modules/auth/desktop-token-middleware.js";
 import { createRateLimiter } from "./middleware/rate-limiter.js";
 import { createCsrfMiddleware } from "./middleware/csrf.js";
 import { buildPrometheusMetrics } from "./middleware/prometheus-metrics.js";
@@ -219,6 +222,7 @@ const setupApp = () => {
   }
 
   registerAuthRoutes(app, authMiddleware);
+  registerDeviceCodeRoutes(app, authMiddleware);
   registerUserRoutes(app, authMiddleware);
   registerTeamRoutes(app, authMiddleware);
   registerProjectRoutes(app, authMiddleware);
@@ -233,6 +237,10 @@ const setupApp = () => {
   registerSettingsRoutes(app, authMiddleware);
   registerTranslateRoutes(app, authMiddleware);
   registerAiToolsRoutes(app, authMiddleware);
+  registerLicenseRoutes(app, {
+    ...authMiddleware,
+    authenticateDesktopToken: createDesktopTokenMiddleware(),
+  });
 
   app.use("*", (req, res) => {
     res.status(404).json({ error: "NOT_FOUND", message: "Route not found" });

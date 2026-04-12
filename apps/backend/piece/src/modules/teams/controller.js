@@ -1,7 +1,8 @@
-import { teamService } from './service.js';
-import { createComponentLogger } from '../../utils/logger.js';
+import { teamService } from "./service.js";
+import { inviteService } from "./invite-service.js";
+import { createComponentLogger } from "../../utils/logger.js";
 
-const componentLogger = createComponentLogger('TeamController');
+const componentLogger = createComponentLogger("TeamController");
 
 async function create(req, res) {
   try {
@@ -9,16 +10,21 @@ async function create(req, res) {
 
     if (!name || name.trim().length === 0) {
       return res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Team name is required',
+        error: "VALIDATION_ERROR",
+        message: "Team name is required",
       });
     }
 
-    const team = await teamService.create({ name: name.trim(), ownerId: req.user.id });
+    const team = await teamService.create({
+      name: name.trim(),
+      ownerId: req.user.id,
+    });
     res.status(201).json(team);
   } catch (error) {
-    componentLogger.error('Failed to create team', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to create team' });
+    componentLogger.error("Failed to create team", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to create team" });
   }
 }
 
@@ -27,8 +33,10 @@ async function list(req, res) {
     const teams = await teamService.listByUser(req.user.id);
     res.json({ data: teams });
   } catch (error) {
-    componentLogger.error('Failed to list teams', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to list teams' });
+    componentLogger.error("Failed to list teams", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to list teams" });
   }
 }
 
@@ -36,12 +44,16 @@ async function getById(req, res) {
   try {
     const team = await teamService.getById(req.params.teamId);
     if (!team) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Team not found" });
     }
     res.json(team);
   } catch (error) {
-    componentLogger.error('Failed to get team', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get team' });
+    componentLogger.error("Failed to get team", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to get team" });
   }
 }
 
@@ -49,12 +61,16 @@ async function update(req, res) {
   try {
     const team = await teamService.update(req.params.teamId, req.body);
     if (!team) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Team not found' });
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Team not found" });
     }
     res.json(team);
   } catch (error) {
-    componentLogger.error('Failed to update team', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to update team' });
+    componentLogger.error("Failed to update team", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to update team" });
   }
 }
 
@@ -64,32 +80,43 @@ async function addMember(req, res) {
 
     if (!userId) {
       return res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'userId is required',
+        error: "VALIDATION_ERROR",
+        message: "userId is required",
       });
     }
 
     const member = await teamService.addMember(req.params.teamId, userId, role);
     res.status(201).json(member);
   } catch (error) {
-    if (error.code === 'ALREADY_MEMBER') {
-      return res.status(409).json({ error: 'CONFLICT', message: error.message });
+    if (error.code === "ALREADY_MEMBER") {
+      return res
+        .status(409)
+        .json({ error: "CONFLICT", message: error.message });
     }
-    componentLogger.error('Failed to add member', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to add member' });
+    componentLogger.error("Failed to add member", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to add member" });
   }
 }
 
 async function removeMember(req, res) {
   try {
-    const removed = await teamService.removeMember(req.params.teamId, req.params.userId);
+    const removed = await teamService.removeMember(
+      req.params.teamId,
+      req.params.userId,
+    );
     if (!removed) {
-      return res.status(404).json({ error: 'NOT_FOUND', message: 'Member not found' });
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Member not found" });
     }
     res.status(204).send();
   } catch (error) {
-    componentLogger.error('Failed to remove member', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to remove member' });
+    componentLogger.error("Failed to remove member", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to remove member" });
   }
 }
 
@@ -98,8 +125,72 @@ async function getMembers(req, res) {
     const members = await teamService.getMembers(req.params.teamId);
     res.json({ data: members });
   } catch (error) {
-    componentLogger.error('Failed to get members', { error: error.message });
-    res.status(500).json({ error: 'INTERNAL_ERROR', message: 'Failed to get members' });
+    componentLogger.error("Failed to get members", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to get members" });
+  }
+}
+
+async function createInvite(req, res) {
+  try {
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({
+        error: "VALIDATION_ERROR",
+        message: "Role is required",
+      });
+    }
+
+    const invite = await inviteService.createInvite(
+      req.params.teamId,
+      role,
+      req.user.id,
+    );
+    res.status(201).json(invite);
+  } catch (error) {
+    if (error.code === "INVALID_ROLE") {
+      return res
+        .status(400)
+        .json({ error: "VALIDATION_ERROR", message: error.message });
+    }
+    componentLogger.error("Failed to create invite", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to create invite" });
+  }
+}
+
+async function listInvites(req, res) {
+  try {
+    const invites = await inviteService.listInvites(req.params.teamId);
+    res.json({ data: invites });
+  } catch (error) {
+    componentLogger.error("Failed to list invites", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to list invites" });
+  }
+}
+
+async function revokeInvite(req, res) {
+  try {
+    const revoked = await inviteService.revokeInvite(
+      req.params.teamId,
+      req.params.inviteId,
+    );
+    if (!revoked) {
+      return res
+        .status(404)
+        .json({ error: "NOT_FOUND", message: "Invite not found" });
+    }
+    res.status(204).send();
+  } catch (error) {
+    componentLogger.error("Failed to revoke invite", { error: error.message });
+    res
+      .status(500)
+      .json({ error: "INTERNAL_ERROR", message: "Failed to revoke invite" });
   }
 }
 
@@ -111,4 +202,7 @@ export const teamController = {
   addMember,
   removeMember,
   getMembers,
+  createInvite,
+  listInvites,
+  revokeInvite,
 };

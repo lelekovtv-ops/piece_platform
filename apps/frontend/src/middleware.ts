@@ -19,8 +19,9 @@ export function middleware(request: NextRequest) {
   }
 
   const hasRefreshToken = request.cookies.has("piece_rt")
+  const hasDevCredentials = process.env.NEXT_PUBLIC_DEV_EMAIL && process.env.NEXT_PUBLIC_DEV_PASSWORD
 
-  if (!hasRefreshToken) {
+  if (!hasRefreshToken && !hasDevCredentials) {
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("redirect", pathname)
     return NextResponse.redirect(loginUrl)

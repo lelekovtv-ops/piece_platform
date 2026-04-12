@@ -148,6 +148,8 @@ export function StoryboardPanel({
   const [directorFieldVisibility, setDirectorFieldVisibility] = useState<DirectorFieldVisibility>("all")
   const [scriptFontSize] = useState(16)
   const [breakdownWarning, setBreakdownWarning] = useState<string | null>(null)
+  const [sceneGeneratingId, setSceneGeneratingId] = useState<string | null>(null)
+  const [sceneGenProgress, setSceneGenProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 })
   const scenes = useScenesStore((s) => s.scenes)
   const selectedSceneId = useScenesStore((s) => s.selectedSceneId)
   const selectScene = useScenesStore((s) => s.selectScene)
@@ -725,6 +727,61 @@ export function StoryboardPanel({
     }
   }, [characters, locations, projectStyle, promptLoadingSceneId, selectScene, shotsBySceneId, updateShot])
 
+  const handleGenerateScene = useCallback(async (scene: { id: string; title: string }) => {
+    if (sceneGeneratingId) return
+    const sceneShots = (shotsBySceneId.get(scene.id) ?? []).filter((s) => !s.thumbnailUrl && s.imagePrompt)
+    if (sceneShots.length === 0) {
+      setBreakdownWarning(
+        (shotsBySceneId.get(scene.id) ?? []).length === 0
+          ? `No shots in scene ${scene.title}. Run Breakdown first.`
+          : `All shots in scene ${scene.title} already have images, or no prompts yet. Run Prompts first.`,
+      )
+      return
+    }
+    setSceneGeneratingId(scene.id)
+    setSceneGenProgress({ done: 0, total: sceneShots.length })
+
+    const CONCURRENCY = 2
+    let done = 0
+    const queue = [...sceneShots]
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const shot = queue.shift()
+        if (!shot) break
+        try {
+          setGeneratingIds((prev) => new Set(prev).add(shot.id))
+          const result = await generateShotImage(shot)
+          const freshShot = useTimelineStore.getState().shots.find((s) => s.id === shot.id)
+          const entry = { url: result.objectUrl, blobKey: result.blobKey, s3Key: result.s3Key, publicUrl: result.publicUrl, timestamp: Date.now(), source: "generate" as const }
+          const history = [...(freshShot?.generationHistory || []), entry]
+          updateShot(shot.id, {
+            thumbnailUrl: result.objectUrl,
+            thumbnailBlobKey: result.blobKey,
+            s3Key: result.s3Key,
+            publicUrl: result.publicUrl,
+            generationHistory: history,
+            activeHistoryIndex: history.length - 1,
+          })
+        } catch (error) {
+          console.error(`Scene gen failed for shot ${shot.id}:`, error)
+          setFailedIds((prev) => new Set(prev).add(shot.id))
+        } finally {
+          setGeneratingIds((prev) => { const next = new Set(prev); next.delete(shot.id); return next })
+          done++
+          setSceneGenProgress({ done, total: sceneShots.length })
+        }
+      }
+    }
+
+    try {
+      await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()))
+    } finally {
+      setSceneGeneratingId(null)
+      setSceneGenProgress({ done: 0, total: 0 })
+    }
+  }, [sceneGeneratingId, shotsBySceneId, updateShot])
+
   const handleLucBessonBreakdown = useCallback(() => {
     if (!lucBessonProfile) {
       setBreakdownWarning("Luc Besson профиль ещё не подключён")
@@ -952,17 +1009,43 @@ export function StoryboardPanel({
     if (!shot || videoGeneratingIds.has(shotId)) return
     setVideoGeneratingIds((prev) => new Set(prev).add(shotId))
     try {
+      const { generateContent } = await import("@/lib/generation/client")
       const videoPrompt = shot.videoPrompt || buildVideoPrompt(shot, characters, locations, projectStyle, bibleProps)
-      console.info("[Video Generate] Shot:", shotId, "Prompt:", videoPrompt.slice(0, 120))
-      // TODO: call video generation API when ready
-      // For now, save the generated prompt to the shot
-      updateShot(shotId, { videoPrompt })
+
+      const selectedVideoModel = useBoardStore.getState().selectedVideoModel || "sjinn-veo3"
+      const hasImage = !!shot.thumbnailUrl
+      const isI2V = hasImage && selectedVideoModel.endsWith("-i2v")
+
+      let sourceImageUrl: string | undefined
+      if (isI2V && shot.thumbnailUrl) {
+        try {
+          const resp = await fetch(shot.thumbnailUrl)
+          const blob = await resp.blob()
+          sourceImageUrl = await new Promise<string>((resolve) => {
+            const r = new FileReader()
+            r.onloadend = () => resolve(r.result as string)
+            r.readAsDataURL(blob)
+          })
+        } catch {}
+      }
+
+      const result = await generateContent(
+        { model: selectedVideoModel, prompt: videoPrompt, sourceImageUrl, aspectRatio: "16:9" },
+      )
+
+      if (result.blob) {
+        const blobKey = `shot-video-${shotId}-${Date.now()}`
+        const projectId = useProjectsStore.getState().activeProjectId || undefined
+        const adaptive = await saveBlobAdaptive(blobKey, result.blob, projectId)
+        const url = adaptive.remote ? adaptive.url : URL.createObjectURL(result.blob)
+        updateShot(shotId, { originalUrl: url, videoPrompt })
+      }
     } catch (error) {
       console.error("Video generation error:", error)
     } finally {
       setVideoGeneratingIds((prev) => { const next = new Set(prev); next.delete(shotId); return next })
     }
-  }, [shots, videoGeneratingIds, updateShot, characters, locations, projectStyle])
+  }, [shots, videoGeneratingIds, updateShot, characters, locations, projectStyle, bibleProps])
 
   const openEditOverlay = useCallback((shotId: string) => {
     setEditOverlayShotId(shotId)
@@ -1585,16 +1668,37 @@ ${shotText}
                     }
                   </button>
                   {!isBreaking && (
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleScenePromptGeneration(scene) }}
-                      disabled={isGeneratingPrompts || relatedShots.length === 0}
-                      className="flex h-6 items-center gap-1 rounded-md px-1.5 text-[9px] uppercase tracking-[0.12em] text-[#CBB892] transition-colors hover:bg-[#D4A853]/10 hover:text-[#E7D1A4] disabled:opacity-40"
-                      aria-label={`Generate prompts for scene ${scene.index}`}
-                    >
-                      {isGeneratingPrompts ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
-                      Prompts
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleScenePromptGeneration(scene) }}
+                        disabled={isGeneratingPrompts || relatedShots.length === 0}
+                        className="flex h-6 items-center gap-1 rounded-md px-1.5 text-[9px] uppercase tracking-[0.12em] text-[#CBB892] transition-colors hover:bg-[#D4A853]/10 hover:text-[#E7D1A4] disabled:opacity-40"
+                        aria-label={`Generate prompts for scene ${scene.index}`}
+                      >
+                        {isGeneratingPrompts ? <Loader2 size={10} className="animate-spin" /> : <Wand2 size={10} />}
+                        Prompts
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleGenerateScene(scene) }}
+                        disabled={sceneGeneratingId === scene.id || relatedShots.length === 0}
+                        className="flex h-6 items-center gap-1 rounded-md px-1.5 text-[9px] uppercase tracking-[0.12em] text-[#7DCE82] transition-colors hover:bg-[#7DCE82]/10 hover:text-[#A5E6A8] disabled:opacity-40"
+                        aria-label={`Generate images for scene ${scene.index}`}
+                      >
+                        {sceneGeneratingId === scene.id ? (
+                          <>
+                            <Loader2 size={10} className="animate-spin" />
+                            {sceneGenProgress.done}/{sceneGenProgress.total}
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon size={10} />
+                            Generate
+                          </>
+                        )}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
